@@ -140,46 +140,117 @@ with tab_chat:
     # Sidebar with example questions
     with st.sidebar:
         st.header("💡 Example Questions")
+        # Main example questions with expected answers
         example_questions = [
-            "What country has the highest current climate risk?",
-            "How does Brazil's 2025 climate risk compare to its 10-year average?",
-            "What year was most similar to this season in terms of climate risk?",
-            "What's the global average climate risk forecast for September 2025?",
-            "How does the EU's risk today compare with last year?",
-            "What are the top 3 countries with the lowest historical risk?",
-            "What's the trend in maximum climate risk from 2016 to 2025?",
-            "Did India's risk increase or decrease from the previous growing season?",
-            "What is the current yield rating and how does it relate to risk?",
-            "Which regions are showing a spike in upcoming seasonal risk?"
+            {
+                "question": "What country has the highest current climate risk?",
+                "expected": "Pakistan (PK) with 48.8 WAPR for Rice (absolute highest across all commodities)"
+            },
+            {
+                "question": "How does Brazil's 2025 climate risk compare to its 10-year average?",
+                "expected": "Brazil: 16.6 WAPR vs 14.2 historical (+16.9% increase)"
+            },
+            {
+                "question": "What year was most similar to this season in terms of climate risk?",
+                "expected": "2018 was most similar to 2025 growing season (Low risk, 3 stars)"
+            },
+            {
+                "question": "What's the global average climate risk forecast for September 2025?",
+                "expected": "Global avg: 26.4 WAPR, Global max: 56.1 WAPR for Cocoa beans"
+            },
+            {
+                "question": "How does the EU's risk today compare with last year?",
+                "expected": "EU Wheat unchanged: 23.5 WAPR (2026 vs 2025, delta: 0.0, trend: unchanged)"
+            },
+            {
+                "question": "What are the top 3 countries with the lowest historical risk?",
+                "expected": "1. Peru (13.4), 2. Brazil (14.2), 3. Ecuador (14.8)"
+            },
+            {
+                "question": "What's the trend in maximum climate risk from 2016 to 2025?",
+                "expected": "Declining trend: 100.0 WAPR (2016) → 56.1 WAPR (2025)"
+            },
+            {
+                "question": "Did India's risk increase or decrease from the previous growing season?",
+                "expected": "India unchanged: 45.7 WAPR (no change)"
+            },
+            {
+                "question": "What is the current yield rating and how does it relate to risk?",
+                "expected": "Oil palm: 'Good' yield, 2.88 mt/ha, 16.5 WAPR"
+            },
+            {
+                "question": "Which regions are showing a spike in upcoming seasonal risk?",
+                "expected": "Bangladesh (+4.9 diff, 41.2 upcoming), Brazil (+3.5 diff)"
+            }
         ]
         
         # Optional additional questions for testing
         optional_questions = [
-            "What are the top 5 countries with highest climate risk for Rice?",
-            "How does Indonesia's climate risk for Oil palm fruit compare between 2024 and 2025?",
-            "What is the global production volume for Soya beans and its risk category?"
+            {
+                "question": "What are the top 5 countries with highest climate risk for Rice?",
+                "expected": "1. Pakistan (48.8), 2. US (45.4), 3. Myanmar (43.2)"
+            },
+            {
+                "question": "How does Indonesia's climate risk for Oil palm fruit compare between 2024 and 2025?",
+                "expected": "Only 2025 available: 11.5 WAPR vs 18.0 historical (-36.11%)"
+            },
+            {
+                "question": "What is the global production volume for Soya beans and its risk category?",
+                "expected": "Global yield: 2.74 mt/ha, Neutral rating, 27.4 WAPR"
+            }
         ]
         
-        for i, question in enumerate(example_questions):
-            if st.button(f"📝 {question}", key=f"example_{i}"):
+        # Initialize session state for showing expected answers
+        if "show_expected" not in st.session_state:
+            st.session_state.show_expected = {}
+        
+        for i, item in enumerate(example_questions, 1):
+            question = item["question"]
+            expected = item["expected"]
+            key = f"example_{i}"
+            
+            if st.button(f"📝 **Q{i}:** {question}", key=key):
                 # Request prefill; will be applied on next rerun before widget instantiation
                 st.session_state.prefill_value = question
                 st.session_state.prefill_requested = True
+                # Show expected answer for this question
+                st.session_state.show_expected[key] = True
                 st.rerun()
+            
+            # Show expected answer if this question was clicked
+            if st.session_state.show_expected.get(key, False):
+                st.info(f"📋 **Expected Answer:** {expected}")
         
         st.divider()
         st.subheader("🔬 Optional Test Questions")
-        for i, question in enumerate(optional_questions):
-            if st.button(f"🧪 {question}", key=f"optional_{i}"):
+        for i, item in enumerate(optional_questions, 1):
+            question = item["question"]
+            expected = item["expected"]
+            key = f"optional_{i}"
+            
+            if st.button(f"🧪 **T{i}:** {question}", key=key):
                 # Request prefill; will be applied on next rerun before widget instantiation
                 st.session_state.prefill_value = question
                 st.session_state.prefill_requested = True
+                # Show expected answer for this question
+                st.session_state.show_expected[key] = True
                 st.rerun()
+            
+            # Show expected answer if this question was clicked
+            if st.session_state.show_expected.get(key, False):
+                st.info(f"📋 **Expected Answer:** {expected}")
         
         st.divider()
-        if st.button("🗑️ Clear Chat History"):
-            st.session_state.messages = []
-            st.rerun()
+        col_clear1, col_clear2 = st.columns(2)
+        with col_clear1:
+            if st.button("🗑️ Clear Chat", use_container_width=True):
+                st.session_state.messages = []
+                st.rerun()
+        
+        with col_clear2:
+            if st.button("📋 Hide Answers", use_container_width=True):
+                st.session_state.show_expected = {}
+                st.rerun()
 
 with tab_queries:
     st.subheader("API Endpoint Testing")
@@ -232,6 +303,15 @@ with tab_queries:
             if st.button("Query", key="q5_btn"):
                 res = post("/api/v1/query/top-k-lowest-hist-risk", 
                           {"commodity": t_commodity, "k": int(t_k)})
+                st.json(res)
+
+        with st.expander("5b. Top-K highest current risk (NEW)"):
+            st.caption("Example: Top 5 countries with highest current risk for Rice")
+            th_commodity = st.text_input("Commodity", value="Rice", key="q5b_commodity")
+            th_k = st.number_input("K", value=5, min_value=1, max_value=10, key="q5b_k")
+            if st.button("Query", key="q5b_btn"):
+                res = post("/api/v1/query/top-k-highest-current-risk", 
+                          {"commodity": th_commodity, "k": int(th_k)})
                 st.json(res)
 
     with col2:

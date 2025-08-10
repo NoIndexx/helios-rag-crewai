@@ -15,6 +15,7 @@ from ..schemas import (
     YieldRiskRequest,
     UpcomingSpikeRequest,
     EuRiskComparisonRequest,
+    EuOverallRiskComparisonRequest,
     AnswerResponse,
 )
 
@@ -100,6 +101,14 @@ async def eu_risk_comparison(req: EuRiskComparisonRequest, db=Depends(get_db)):
     result = await queries.get_eu_risk_comparison(db, req.commodity, req.current_year, req.previous_year)
     if result is None:
         raise HTTPException(status_code=404, detail="No data available for EU countries")
+    return {"answer": result, "params": req.model_dump()}
+
+
+@router.post("/eu-risk-comparison-overall", response_model=AnswerResponse)
+async def eu_risk_comparison_overall(req: EuOverallRiskComparisonRequest, db=Depends(get_db)):
+    result = await queries.get_eu_overall_risk_comparison(db, req.current_year, req.previous_year)
+    if result is None:
+        raise HTTPException(status_code=404, detail="No overall data available for EU")
     return {"answer": result, "params": req.model_dump()}
 
 

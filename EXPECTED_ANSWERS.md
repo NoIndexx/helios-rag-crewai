@@ -6,11 +6,11 @@ Based on API testing and database queries, these are the expected correct answer
 
 All 10 API endpoints are functional and return the following expected data:
 
-### 1. What country has the highest current climate risk for Cocoa beans?
-- **Expected Answer**: India
+### 1. What country has the highest current climate risk?
+- **Expected Answer**: Pakistan (absolute highest across all commodities)
 - **API Endpoint**: `/api/v1/query/highest-current-risk`
-- **Key Data**: India (IN) with 45.7 WAPR for Cocoa beans
-- **Tool**: `get_highest_current_risk`
+- **Key Data**: Pakistan (PK) with 48.8 WAPR for Rice (highest overall), India (IN) with 45.7 WAPR for Cocoa beans, Brazil (BR) with 47.5 WAPR for Sugar cane
+- **Tool**: `get_highest_current_risk` (requires querying multiple commodities)
 
 ### 2. How does Brazil's 2025 climate risk compare to its 10-year average for Cocoa beans?
 - **Expected Answer**: Brazil with specific comparison data
@@ -24,10 +24,10 @@ All 10 API endpoints are functional and return the following expected data:
 - **Key Data**: Global (GLB) scope for Cocoa beans, similar year: 2018, risk category: Low, rating: 3 stars
 - **Tool**: `get_most_similar_year`
 
-### 4. What's the global average climate risk for Cocoa beans in September 2025?
-- **Expected Answer**: Global average WAPR: 29.6, Global maximum WAPR: 56.7
+### 4. What's the global average climate risk forecast for September 2025?
+- **Expected Answer**: Global average WAPR: 26.4, Global maximum WAPR: 56.1
 - **API Endpoint**: `/api/v1/query/global-avg-for-month`
-- **Key Data**: Cocoa beans, year 2025, month 9, global_avg_wapr: 29.6, global_max_wapr: 56.7
+- **Key Data**: Cocoa beans, year 2025, month 9, global_avg_wapr: 26.4, global_max_wapr: 56.1
 - **Tool**: `get_global_avg_for_month`
 
 ### 5. How does the EU's risk for Wheat in 2026 compare with 2025?

@@ -65,3 +65,8 @@ class AnswerResponse(BaseModel):
     params: Dict[str, Any]
 
 
+class EuOverallRiskComparisonRequest(BaseModel):
+    current_year: int
+    previous_year: int
+
+

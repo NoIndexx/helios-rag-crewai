@@ -50,4 +50,7 @@ class CrewApiClient:
     def get_eu_risk_comparison(self, commodity: str, current_year: int, previous_year: int) -> dict[str, Any]:
         return self.post("/api/v1/query/eu-risk-comparison", {"commodity": commodity, "current_year": current_year, "previous_year": previous_year})
 
+    def get_eu_overall_risk_comparison(self, current_year: int, previous_year: int) -> dict[str, Any]:
+        return self.post("/api/v1/query/eu-risk-comparison-overall", {"current_year": current_year, "previous_year": previous_year})
+
 

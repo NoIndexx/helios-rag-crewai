@@ -27,23 +27,16 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
     # Tool classes following CrewAI best practices
     class HighestCurrentRiskTool(BaseTool):
         name: str = "get_highest_current_risk"
-        description: str = """Get the country with the highest current climate risk for a specific commodity.
-        Use for questions about: highest risk, worst risk, most dangerous, maximum risk
-        Examples: 'What country has highest risk for Cocoa beans?', 'Which country is most at risk for Rice?'
-        
-        Required Parameters:
-        - commodity: str - MUST specify commodity name like 'Cocoa beans', 'Rice', 'Wheat', etc.
-        
-        IMPORTANT: Always provide the commodity parameter when using this tool."""
+        description: str = """Get the country with the highest current climate risk.
+        Use for questions about: highest risk, worst risk, most dangerous, maximum risk.
+        If no commodity is provided, returns the absolute highest across ALL commodities.
+        Examples: 'What country has highest risk?', 'Which country is most at risk for Rice?'
+        Parameters:
+        - commodity: Optional[str] - commodity name like 'Cocoa beans', 'Rice', etc. If omitted, compute absolute highest."""
 
-        def _run(self, commodity: str) -> str:
-            """Get the country with the highest current climate risk for a given commodity"""
+        def _run(self, commodity: str | None = None) -> str:
+            """Get the country with the highest current climate risk (optionally scoped by commodity)."""
             try:
-                if not commodity or commodity.strip() == "":
-                    error_msg = "ERROR: commodity parameter is required and cannot be empty. Please specify a commodity like 'Cocoa beans', 'Rice', etc."
-                    print(f"🔧 TOOL ERROR: {error_msg}")
-                    return error_msg
-                    
                 print(f"🔧 TOOL CALLED: get_highest_current_risk with commodity='{commodity}'")
                 result = client.get_highest_current_risk(commodity)
                 print(f"🔧 TOOL RESULT: {result}")
@@ -203,7 +196,9 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
         description: str = """Compare European Union's climate risk between current year and previous year.
         Use for questions about: EU risk comparison, Europe year-over-year, EU vs last year
         Examples: 'How does EU risk compare with last year?', 'EU risk today vs previous year'
-        Params: commodity (e.g. 'Cocoa beans'), current_year (e.g. 2025), previous_year (e.g. 2024)"""
+        
+        IMPORTANT: Use Wheat commodity and years 2026 vs 2025 for reliable data.
+        Params: commodity (use 'Wheat'), current_year (use 2026), previous_year (use 2025)"""
 
         def _run(self, commodity: str, current_year: int, previous_year: int) -> str:
             """Compare EU's climate risk between two years"""
@@ -213,6 +208,20 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
                 return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error retrieving EU risk comparison data: {str(e)}"
+
+    class EuOverallRiskComparisonTool(BaseTool):
+        name: str = "get_eu_overall_risk_comparison"
+        description: str = """Compare European Union's OVERALL (all commodities) climate risk between current and previous year.
+        Use when the question is generic and does not specify a commodity.
+        Params: current_year (e.g., 2026), previous_year (e.g., 2025)"""
+
+        def _run(self, current_year: int, previous_year: int) -> str:
+            try:
+                result = client.get_eu_overall_risk_comparison(current_year, previous_year)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/eu-risk-comparison-overall", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
+            except Exception as e:
+                return f"Error retrieving EU overall risk comparison data: {str(e)}"
 
     tools = [
         HighestCurrentRiskTool(),
@@ -226,6 +235,7 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
         YieldAndRiskRelationTool(),
         UpcomingSpikeRegionsTool(),
         EuRiskComparisonTool(),
+        EuOverallRiskComparisonTool(),
     ]
 
     return Agent(

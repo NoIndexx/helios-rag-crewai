@@ -298,3 +298,52 @@ async def get_eu_risk_comparison(conn, commodity: str, current_year: int, previo
     }
 
 
+async def get_eu_overall_risk_comparison(conn, current_year: int, previous_year: int) -> Optional[dict[str, Any]]:
+    """Aggregate EU risk across ALL commodities by averaging current WAPR.
+    Returns a comparison between two years.
+    """
+    # Current year overall
+    current_sql = (
+        """
+        SELECT AVG(byc.this_year_avg_wapr) as avg_wapr
+        FROM climate_risk_by_country byc
+        JOIN countries ctry ON ctry.id = byc.country_id
+        WHERE ctry.code = 'EU' AND byc.year = ? AND byc.this_year_avg_wapr IS NOT NULL
+        """
+    )
+    previous_sql = (
+        """
+        SELECT AVG(byc.this_year_avg_wapr) as avg_wapr
+        FROM climate_risk_by_country byc
+        JOIN countries ctry ON ctry.id = byc.country_id
+        WHERE ctry.code = 'EU' AND byc.year = ? AND byc.this_year_avg_wapr IS NOT NULL
+        """
+    )
+
+    current_row = await fetch_one(conn, current_sql, (current_year,))
+    previous_row = await fetch_one(conn, previous_sql, (previous_year,))
+
+    if not current_row or not previous_row:
+        return None
+
+    current_wapr = current_row.get("avg_wapr")
+    previous_wapr = previous_row.get("avg_wapr")
+
+    if current_wapr is None or previous_wapr is None:
+        return None
+
+    delta = float(current_wapr) - float(previous_wapr)
+    pct_change = (delta / float(previous_wapr) * 100.0) if float(previous_wapr) != 0 else None
+
+    return {
+        "region": "European Union",
+        "current_year": current_year,
+        "previous_year": previous_year,
+        "current_overall_avg_wapr": float(current_wapr),
+        "previous_overall_avg_wapr": float(previous_wapr),
+        "delta": delta,
+        "percent_change": pct_change,
+        "trend": "increased" if delta > 0 else "decreased" if delta < 0 else "unchanged"
+    }
+
+
