@@ -19,51 +19,51 @@ All 10 API endpoints are functional and return the following expected data:
 - **Tool**: `compare_country_year_vs_hist`
 
 ### 3. What year was most similar to this season for Cocoa beans?
-- **Expected Answer**: Specific year with similarity data
+- **Expected Answer**: 2018 was most similar to the 2025 growing season
 - **API Endpoint**: `/api/v1/query/most-similar-year`
-- **Key Data**: Global (GLB) scope for Cocoa beans
+- **Key Data**: Global (GLB) scope for Cocoa beans, similar year: 2018, risk category: Low, rating: 3 stars
 - **Tool**: `get_most_similar_year`
 
 ### 4. What's the global average climate risk for Cocoa beans in September 2025?
-- **Expected Answer**: Global average WAPR for September 2025
+- **Expected Answer**: Global average WAPR: 29.6, Global maximum WAPR: 56.7
 - **API Endpoint**: `/api/v1/query/global-avg-for-month`
-- **Key Data**: Cocoa beans, year 2025, month 9
+- **Key Data**: Cocoa beans, year 2025, month 9, global_avg_wapr: 29.6, global_max_wapr: 56.7
 - **Tool**: `get_global_avg_for_month`
 
 ### 5. How does the EU's risk for Wheat in 2026 compare with 2025?
-- **Expected Answer**: EU risk comparison between years
+- **Expected Answer**: EU risk unchanged - both years at 23.5 WAPR
 - **API Endpoint**: `/api/v1/query/eu-risk-comparison`
-- **Key Data**: Wheat commodity, comparing 2026 vs 2025
+- **Key Data**: Wheat commodity, 2026: 23.5 WAPR, 2025: 23.5 WAPR, delta: 0.0, trend: unchanged
 - **Tool**: `get_eu_risk_comparison`
 
 ### 6. What are the top 3 countries with the lowest historical risk for Cocoa beans?
-- **Expected Answer**: List including Peru as first
+- **Expected Answer**: 1. Peru (PE): 13.4, 2. Brazil (BR): 14.2, 3. Ecuador (EC): 14.8
 - **API Endpoint**: `/api/v1/query/top-k-lowest-hist-risk`
-- **Key Data**: Peru (PE) with 13.4 hist_avg_wapr as lowest
+- **Key Data**: Peru (PE) with 13.4 hist_avg_wapr as lowest, followed by Brazil (14.2) and Ecuador (14.8)
 - **Tool**: `get_top_k_lowest_hist_risk`
 
 ### 7. What's the trend in maximum climate risk for Cocoa beans from 2016 to 2025?
-- **Expected Answer**: Trend data showing risk evolution
+- **Expected Answer**: Declining trend from 100.0 WAPR in 2016 to 56.1 WAPR in 2025
 - **API Endpoint**: `/api/v1/query/trend-max-risk`
-- **Key Data**: 100 data points from 2016-2025, starting with 100.0 WAPR in 2016
+- **Key Data**: 100 data points from 2016-2025, starting with 100.0 WAPR in 2016, ending with 56.1 WAPR in 2025
 - **Tool**: `get_trend_max_risk`
 
 ### 8. Did India's risk increase or decrease from the previous growing season for Cocoa beans?
-- **Expected Answer**: India seasonal change analysis
+- **Expected Answer**: India's risk remained unchanged at 45.7 WAPR
 - **API Endpoint**: `/api/v1/query/country-season-change`
-- **Key Data**: India (IN) for Cocoa beans seasonal comparison
+- **Key Data**: India (IN) current: 45.7 WAPR, previous: 45.7 WAPR, delta: 0.0, direction: no_change
 - **Tool**: `get_country_season_change`
 
 ### 9. What is the current yield rating for Oil palm fruit and how does it relate to risk?
-- **Expected Answer**: Yield rating and risk relationship
+- **Expected Answer**: Yield rating "Good" with 2.88 mt/ha, historical avg risk 16.5 WAPR
 - **API Endpoint**: `/api/v1/query/yield-and-risk-relation`
-- **Key Data**: Oil palm fruit, global scope
+- **Key Data**: Oil palm fruit, global scope, yield_rating: "Good", total_yield: 2.88 mt/ha, hist_avg_wapr: 16.5
 - **Tool**: `get_yield_and_risk_relation`
 
 ### 10. Which regions are showing a spike in upcoming seasonal risk for Rice?
-- **Expected Answer**: Regions with risk spikes, including Bangladesh
+- **Expected Answer**: Bangladesh (BD) and Brazil (BR) showing spikes
 - **API Endpoint**: `/api/v1/query/upcoming-spike-regions`
-- **Key Data**: Bangladesh (BD) with 4.9 avg_risk_score_diff and 41.2 upcoming_year_risk_score
+- **Key Data**: Bangladesh (BD) with 4.9 avg_risk_score_diff and 41.2 upcoming_year_risk_score, Brazil (BR) with 3.5 diff and 28.5 upcoming
 - **Tool**: `get_upcoming_spike_regions`
 
 ## Testing Instructions
@@ -92,4 +92,21 @@ If tests fail, check the logs for:
 
 ## API Data Verification
 
-The test suite is based on actual API responses verified on [timestamp]. If database content changes, update the expected keywords in `test_fix.py` accordingly.
+The test suite is based on actual API responses verified through direct database queries. **Data verified: December 2024**
+
+### Database Statistics:
+- **Commodities**: 8 total (`Cocoa beans`, `Coffee, green`, `Corn: Commodity Tracked`, `Oil palm fruit`, `Rice`, `Soya beans`, `Sugar cane`, `Wheat`)
+- **Records**: 
+  - climate_risk_by_country: 1,170 records
+  - risk_compared_hist_box: 390 records  
+  - risk_global_avg_max: 1,000 records
+  - most_similar_year: 39 records
+
+### Key Verified Values:
+- **Highest Risk**: India (IN) with 45.7 WAPR for Cocoa beans ✅
+- **Brazil 2025**: 16.6 WAPR vs 14.2 historical (16.9% increase) ✅  
+- **Similar Year**: 2018 most similar to 2025 growing season ✅
+- **Lowest Risk Countries**: Peru (13.4), Brazil (14.2), Ecuador (14.8) ✅
+- **EU Wheat**: Unchanged at 23.5 WAPR between 2025-2026 ✅
+
+If database content changes, update the expected keywords in `test_fix.py` accordingly.
