@@ -13,6 +13,7 @@ from ..schemas import (
     TrendRequest,
     TrendOverallRequest,
     CountrySeasonChangeRequest,
+    CountrySeasonChangeOverallRequest,
     YieldRiskRequest,
     UpcomingSpikeRequest,
     EuRiskComparisonRequest,
@@ -86,6 +87,14 @@ async def country_season_change(req: CountrySeasonChangeRequest, db=Depends(get_
     result = await queries.get_country_season_change(db, req.country_code, req.commodity)
     if result is None:
         raise HTTPException(status_code=404, detail="Insufficient data to compare")
+    return {"answer": result, "params": req.model_dump()}
+
+
+@router.post("/country-season-change-overall", response_model=AnswerResponse)
+async def country_season_change_overall(req: CountrySeasonChangeOverallRequest, db=Depends(get_db)):
+    result = await queries.get_country_season_change_overall(db, req.country_code)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Insufficient data to compare overall")
     return {"answer": result, "params": req.model_dump()}
 
 

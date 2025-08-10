@@ -216,6 +216,52 @@ async def get_country_season_change(conn, country_code: str, commodity: str) -> 
     }
 
 
+async def get_country_season_change_overall(conn, country_code: str) -> Optional[dict[str, Any]]:
+    """Compare latest two seasons for a country, aggregated across ALL commodities.
+    Aggregation method: average of this_year_avg_wapr per year.
+    """
+    sql = (
+        """
+        SELECT byc.year, AVG(byc.this_year_avg_wapr) AS avg_wapr
+        FROM climate_risk_by_country byc
+        JOIN countries ctry ON ctry.id = byc.country_id
+        WHERE ctry.code = ? AND byc.this_year_avg_wapr IS NOT NULL
+        GROUP BY byc.year
+        ORDER BY byc.year DESC
+        LIMIT 2
+        """
+    )
+    rows = await fetch_all(conn, sql, (country_code,))
+    if len(rows) < 1:
+        return None
+
+    latest = rows[0]
+    current_wapr = latest.get("avg_wapr")
+    if current_wapr is None:
+        return None
+
+    if len(rows) >= 2:
+        prev = rows[1]
+        prev_wapr = prev.get("avg_wapr")
+        if prev_wapr is not None:
+            delta = float(current_wapr) - float(prev_wapr)
+            direction = "increase" if delta > 0 else ("decrease" if delta < 0 else "no_change")
+        else:
+            return None
+    else:
+        return None
+
+    return {
+        "country_code": country_code,
+        "current_year": latest.get("year"),
+        "current_wapr_overall": float(current_wapr),
+        "previous_wapr_overall": float(prev_wapr),
+        "delta": delta,
+        "direction": direction,
+        "aggregation": "avg",
+    }
+
+
 async def get_yield_and_risk_relation(conn, commodity: str, scope: str = "global", country_code: Optional[str] = None):
     if scope == "country" and country_code:
         sql = (

@@ -165,7 +165,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
         name: str = "get_country_season_change"
         description: str = """Compare latest two season snapshots for a country.
         Use for questions like 'Did India's risk increase or decrease from the previous growing season?'
-        Params: commodity, country_code (e.g. IN, BR, US)"""
+        Params: commodity, country_code (e.g. IN, BR, US)
+        If the question does NOT specify commodity, prefer using get_country_season_change_overall."""
 
         def _run(self, commodity: str, country_code: str) -> str:
             """Compare latest two season snapshots for a country"""
@@ -190,6 +191,21 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
                 return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error retrieving yield and risk relation data: {str(e)}"
+
+    class CountrySeasonChangeOverallTool(BaseTool):
+        name: str = "get_country_season_change_overall"
+        description: str = """Compare latest two season snapshots for a country AGGREGATED across ALL commodities.
+        Use when the question is generic and does not specify commodity.
+        Params: country_code (e.g. IN, BR, US)
+        Aggregation: average of this_year_avg_wapr per year."""
+
+        def _run(self, country_code: str) -> str:
+            try:
+                result = client.get_country_season_change_overall(country_code)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/country-season-change-overall", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
+            except Exception as e:
+                return f"Error retrieving country season change overall data: {str(e)}"
 
     class UpcomingSpikeRegionsTool(BaseTool):
         name: str = "get_upcoming_spike_regions"
@@ -252,6 +268,7 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
         UpcomingSpikeRegionsTool(),
         EuRiskComparisonTool(),
         EuOverallRiskComparisonTool(),
+        CountrySeasonChangeOverallTool(),
     ]
 
     return Agent(

@@ -43,6 +43,10 @@ class CountrySeasonChangeRequest(BaseModel):
     country_code: str
 
 
+class CountrySeasonChangeOverallRequest(BaseModel):
+    country_code: str
+
+
 class YieldRiskRequest(BaseModel):
     commodity: str
     scope: str = Field(default="global")

@@ -44,6 +44,9 @@ class CrewApiClient:
     def get_country_season_change(self, commodity: str, country_code: str) -> dict[str, Any]:
         return self.post("/api/v1/query/country-season-change", {"commodity": commodity, "country_code": country_code})
 
+    def get_country_season_change_overall(self, country_code: str) -> dict[str, Any]:
+        return self.post("/api/v1/query/country-season-change-overall", {"country_code": country_code})
+
     def get_yield_and_risk_relation(self, commodity: str, scope: str = "global", country_code: Optional[str] = None) -> dict[str, Any]:
         return self.post("/api/v1/query/yield-and-risk-relation", {"commodity": commodity, "scope": scope, "country_code": country_code})
 

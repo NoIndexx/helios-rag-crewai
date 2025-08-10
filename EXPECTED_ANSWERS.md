@@ -48,11 +48,11 @@ All 10 API endpoints are functional and return the following expected data:
 - **Key Data**: 100 data points from 2016-2025, starting with 100.0 WAPR in 2016, ending with 56.1 WAPR in 2025
 - **Tool**: `get_trend_max_risk`
 
-### 8. Did India's risk increase or decrease from the previous growing season for Cocoa beans?
-- **Expected Answer**: India's risk remained unchanged at 45.7 WAPR
-- **API Endpoint**: `/api/v1/query/country-season-change`
-- **Key Data**: India (IN) current: 45.7 WAPR, previous: 45.7 WAPR, delta: 0.0, direction: no_change
-- **Tool**: `get_country_season_change`
+### 8. Did India's risk increase or decrease from the previous growing season?
+- **Expected Answer**: India unchanged: 38.0 WAPR (overall avg, 2026 vs 2025, delta: 0.0)
+- **API Endpoint**: `/api/v1/query/country-season-change-overall`
+- **Key Data**: India (IN) current_year: 2026, current_wapr_overall: 38.0, previous_wapr_overall: 38.0, delta: 0.0, direction: no_change, aggregation: avg
+- **Tool**: `get_country_season_change_overall`
 
 ### 9. What is the current yield rating for Oil palm fruit and how does it relate to risk?
 - **Expected Answer**: Yield rating "Good" with 2.88 mt/ha, historical avg risk 16.5 WAPR

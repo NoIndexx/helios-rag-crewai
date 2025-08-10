@@ -172,7 +172,7 @@ with tab_chat:
             },
             {
                 "question": "Did India's risk increase or decrease from the previous growing season?",
-                "expected": "India unchanged: 45.7 WAPR (no change)"
+                "expected": "India unchanged: 38.0 WAPR (overall avg, 2026 vs 2025, delta: 0.0)"
             },
             {
                 "question": "What is the current yield rating and how does it relate to risk?",
