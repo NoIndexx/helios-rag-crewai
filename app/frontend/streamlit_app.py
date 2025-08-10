@@ -103,7 +103,7 @@ with tab_chat:
     # Determine prompt source: sidebar example or user typing
     pending = st.session_state.pending_prompt
     user_prompt = pending if pending else st.chat_input(
-        "Pergunte sobre riscos climáticos... (ex.: 'Qual país tem o maior risco atual para Cocoa beans?')",
+        "Ask about climate risk... (e.g., 'Which country has the highest current risk for Cocoa beans?')",
         key="chat_input"
     )
 
@@ -114,7 +114,7 @@ with tab_chat:
         # Add user message
         st.session_state.messages.append({"role": "user", "content": user_prompt})
         # Call agent
-        with st.spinner("Analisando dados climáticos... (logs no terminal)"):
+        with st.spinner("Analyzing climate data... (see logs in terminal)"):
             try:
                 from app.crew.run_agent import kickoff_example
                 history = st.session_state.get("messages", [])
@@ -127,7 +127,7 @@ with tab_chat:
                     "query": getattr(result, 'query', None),
                 })
             except Exception as e:
-                error_msg = f"Desculpe, houve um erro: {str(e)}"
+                error_msg = f"Sorry, an error occurred: {str(e)}"
                 st.session_state.messages.append({"role": "assistant", "content": error_msg})
         st.rerun()
 

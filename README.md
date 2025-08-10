@@ -19,7 +19,7 @@ Setup (Windows PowerShell)
 3) Run API (FastAPI)
    uvicorn app.backend.main:app --host 0.0.0.0 --port 8000 --reload
 
-4) Run Streamlit (optional)
+4) Run Streamlit
    streamlit run app/frontend/streamlit_app.py
 
 CrewAI demo (optional)
@@ -31,14 +31,23 @@ API endpoints (base prefix: `/api/v1/query`)
 - POST `/most-similar-year`
 - POST `/global-avg-for-month`
 - POST `/top-k-lowest-hist-risk`
+- POST `/top-k-highest-current-risk`
 - POST `/trend-max-risk`
+- POST `/trend-max-risk-overall`
 - POST `/country-season-change`
+- POST `/country-season-change-overall`
 - POST `/yield-and-risk-relation`
 - POST `/upcoming-spike-regions`
+- POST `/eu-risk-comparison`
+- POST `/eu-risk-comparison-overall`
 
 Notes
 - Ingestion is idempotent (unique keys); re-run anytime to refresh data.
 - Streamlit and CrewAI tools call the same API. You can override the base URL via `API_BASE` env var.
+
+Environment variables
+- `API_BASE`: Base URL used by Streamlit and CrewAI tools. Default: `http://localhost:8000`.
+- `OPENAI_MODEL_NAME`: LLM name for the CrewAI agent. Default: `gpt-4o-mini`.
 
 Run with Docker
 1) Build
