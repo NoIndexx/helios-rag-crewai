@@ -135,7 +135,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
         name: str = "get_trend_max_risk"
         description: str = """Return maximum climate risk trend over a year range.
         Use for questions like 'What's the trend in maximum climate risk from 2016 to 2025?'
-        Params: commodity, start_year, end_year"""
+        Params: commodity, start_year, end_year
+        If the question is generic (no commodity specified), prefer using get_trend_max_risk_overall."""
 
         def _run(self, commodity: str, start_year: int, end_year: int) -> str:
             """Return max risk trend over a year range"""
@@ -145,6 +146,20 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
                 return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error retrieving trend max risk data: {str(e)}"
+
+    class TrendMaxRiskOverallTool(BaseTool):
+        name: str = "get_trend_max_risk_overall"
+        description: str = """Return ABSOLUTE maximum climate risk trend across ALL commodities for a year range.
+        Use when commodity is not specified in the question.
+        Params: start_year, end_year"""
+
+        def _run(self, start_year: int, end_year: int) -> str:
+            try:
+                result = client.get_trend_max_risk_overall(start_year, end_year)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/trend-max-risk-overall", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
+            except Exception as e:
+                return f"Error retrieving overall trend max risk data: {str(e)}"
 
     class CountrySeasonChangeTool(BaseTool):
         name: str = "get_country_season_change"
@@ -231,6 +246,7 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
         GlobalAvgForMonthTool(),
         TopKLowestHistRiskTool(),
         TrendMaxRiskTool(),
+        TrendMaxRiskOverallTool(),
         CountrySeasonChangeTool(),
         YieldAndRiskRelationTool(),
         UpcomingSpikeRegionsTool(),

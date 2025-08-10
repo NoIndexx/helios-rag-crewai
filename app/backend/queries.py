@@ -136,14 +136,31 @@ async def get_top_k_highest_current_risk(conn, commodity: str, k: int = 5):
 async def get_trend_max_risk(conn, commodity: str, start_year: int, end_year: int):
     sql = (
         """
-        SELECT year, hist_max_wapr
+        SELECT r.year, MAX(r.hist_max_wapr) AS hist_max_wapr
         FROM risk_global_avg_max r
         JOIN commodities com ON com.id = r.commodity_id
         WHERE com.name = ? AND r.year BETWEEN ? AND ?
+        GROUP BY r.year
         ORDER BY r.year ASC
         """
     )
     return await fetch_all(conn, sql, (commodity, start_year, end_year))
+
+
+async def get_trend_max_risk_overall(conn, start_year: int, end_year: int):
+    """Return absolute trend in maximum risk across ALL commodities by year.
+    For each year in range, pick the maximum hist_max_wapr across commodities.
+    """
+    sql = (
+        """
+        SELECT r.year, MAX(r.hist_max_wapr) AS hist_max_wapr
+        FROM risk_global_avg_max r
+        GROUP BY r.year
+        HAVING r.year BETWEEN ? AND ?
+        ORDER BY r.year ASC
+        """
+    )
+    return await fetch_all(conn, sql, (start_year, end_year))
 
 
 async def get_country_season_change(conn, country_code: str, commodity: str) -> Optional[dict[str, Any]]:

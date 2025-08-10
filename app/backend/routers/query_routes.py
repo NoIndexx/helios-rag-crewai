@@ -11,6 +11,7 @@ from ..schemas import (
     GlobalMonthAvgRequest,
     TopKRequest,
     TrendRequest,
+    TrendOverallRequest,
     CountrySeasonChangeRequest,
     YieldRiskRequest,
     UpcomingSpikeRequest,
@@ -71,6 +72,12 @@ async def top_k_highest_current_risk(req: TopKRequest, db=Depends(get_db)):
 @router.post("/trend-max-risk", response_model=AnswerResponse)
 async def trend_max_risk(req: TrendRequest, db=Depends(get_db)):
     result = await queries.get_trend_max_risk(db, req.commodity, req.start_year, req.end_year)
+    return {"answer": result, "params": req.model_dump()}
+
+
+@router.post("/trend-max-risk-overall", response_model=AnswerResponse)
+async def trend_max_risk_overall(req: TrendOverallRequest, db=Depends(get_db)):
+    result = await queries.get_trend_max_risk_overall(db, req.start_year, req.end_year)
     return {"answer": result, "params": req.model_dump()}
 
 

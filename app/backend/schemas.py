@@ -70,3 +70,8 @@ class EuOverallRiskComparisonRequest(BaseModel):
     previous_year: int
 
 
+class TrendOverallRequest(BaseModel):
+    start_year: int
+    end_year: int
+
+

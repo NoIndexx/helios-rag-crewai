@@ -38,6 +38,9 @@ class CrewApiClient:
     def get_trend_max_risk(self, commodity: str, start_year: int, end_year: int) -> dict[str, Any]:
         return self.post("/api/v1/query/trend-max-risk", {"commodity": commodity, "start_year": start_year, "end_year": end_year})
 
+    def get_trend_max_risk_overall(self, start_year: int, end_year: int) -> dict[str, Any]:
+        return self.post("/api/v1/query/trend-max-risk-overall", {"start_year": start_year, "end_year": end_year})
+
     def get_country_season_change(self, commodity: str, country_code: str) -> dict[str, Any]:
         return self.post("/api/v1/query/country-season-change", {"commodity": commodity, "country_code": country_code})
 
