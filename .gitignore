@@ -144,6 +144,13 @@ ENV/
 env.bak/
 venv.bak/
 
+# SQLite database
+data.db
+*.db-journal
+
+# Streamlit
+.streamlit/
+
 # Spyder project settings
 .spyderproject
 .spyproject

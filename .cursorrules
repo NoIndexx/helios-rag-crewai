@@ -9,6 +9,7 @@ Key Principles
 - Favor named exports for routes and utility functions.
 - Use the Receive an Object, Return an Object (RORO) pattern.
 - Before diving into anything, consider instructions.txt
+- Write in English, always
 
 Python/FastAPI
 - Use def for pure functions and async def for asynchronous operations.
@@ -60,3 +61,9 @@ Key Conventions
     - Structure routes and dependencies clearly to optimize readability and maintainability.
 
 Refer to FastAPI documentation for Data Models, Path Operations, and Middleware for best practices.
+
+[project]
+primary_language = python
+frameworks = [fastapi, streamlit]
+database = sqlite
+style = "functional, deterministic queries, Pydantic v2"
