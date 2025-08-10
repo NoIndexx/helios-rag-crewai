@@ -11,10 +11,13 @@ from ..schemas import (
     GlobalMonthAvgRequest,
     TopKRequest,
     TrendRequest,
+    TrendOverallRequest,
     CountrySeasonChangeRequest,
+    CountrySeasonChangeOverallRequest,
     YieldRiskRequest,
     UpcomingSpikeRequest,
     EuRiskComparisonRequest,
+    EuOverallRiskComparisonRequest,
     AnswerResponse,
 )
 
@@ -61,9 +64,21 @@ async def top_k_lowest_hist_risk(req: TopKRequest, db=Depends(get_db)):
     return {"answer": result, "params": req.model_dump()}
 
 
+@router.post("/top-k-highest-current-risk", response_model=AnswerResponse)
+async def top_k_highest_current_risk(req: TopKRequest, db=Depends(get_db)):
+    result = await queries.get_top_k_highest_current_risk(db, req.commodity, req.k)
+    return {"answer": result, "params": req.model_dump()}
+
+
 @router.post("/trend-max-risk", response_model=AnswerResponse)
 async def trend_max_risk(req: TrendRequest, db=Depends(get_db)):
     result = await queries.get_trend_max_risk(db, req.commodity, req.start_year, req.end_year)
+    return {"answer": result, "params": req.model_dump()}
+
+
+@router.post("/trend-max-risk-overall", response_model=AnswerResponse)
+async def trend_max_risk_overall(req: TrendOverallRequest, db=Depends(get_db)):
+    result = await queries.get_trend_max_risk_overall(db, req.start_year, req.end_year)
     return {"answer": result, "params": req.model_dump()}
 
 
@@ -72,6 +87,14 @@ async def country_season_change(req: CountrySeasonChangeRequest, db=Depends(get_
     result = await queries.get_country_season_change(db, req.country_code, req.commodity)
     if result is None:
         raise HTTPException(status_code=404, detail="Insufficient data to compare")
+    return {"answer": result, "params": req.model_dump()}
+
+
+@router.post("/country-season-change-overall", response_model=AnswerResponse)
+async def country_season_change_overall(req: CountrySeasonChangeOverallRequest, db=Depends(get_db)):
+    result = await queries.get_country_season_change_overall(db, req.country_code)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Insufficient data to compare overall")
     return {"answer": result, "params": req.model_dump()}
 
 
@@ -94,6 +117,14 @@ async def eu_risk_comparison(req: EuRiskComparisonRequest, db=Depends(get_db)):
     result = await queries.get_eu_risk_comparison(db, req.commodity, req.current_year, req.previous_year)
     if result is None:
         raise HTTPException(status_code=404, detail="No data available for EU countries")
+    return {"answer": result, "params": req.model_dump()}
+
+
+@router.post("/eu-risk-comparison-overall", response_model=AnswerResponse)
+async def eu_risk_comparison_overall(req: EuOverallRiskComparisonRequest, db=Depends(get_db)):
+    result = await queries.get_eu_overall_risk_comparison(db, req.current_year, req.previous_year)
+    if result is None:
+        raise HTTPException(status_code=404, detail="No overall data available for EU")
     return {"answer": result, "params": req.model_dump()}
 
 

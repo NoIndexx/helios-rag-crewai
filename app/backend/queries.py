@@ -116,17 +116,51 @@ async def get_top_k_lowest_hist_risk(conn, commodity: str, k: int = 3):
     return await fetch_all(conn, sql, (commodity, k))
 
 
+async def get_top_k_highest_current_risk(conn, commodity: str, k: int = 5):
+    """Get top-K countries with highest CURRENT climate risk (this_year_avg_wapr)"""
+    sql = (
+        """
+        SELECT ctry.name AS country_name, ctry.code AS country_code,
+               com.name AS commodity, byc.this_year_avg_wapr, byc.hist_avg_wapr, byc.year
+        FROM climate_risk_by_country byc
+        JOIN countries ctry ON ctry.id = byc.country_id
+        JOIN commodities com ON com.id = byc.commodity_id
+        WHERE byc.this_year_avg_wapr IS NOT NULL AND com.name = ?
+        ORDER BY byc.this_year_avg_wapr DESC, byc.year DESC 
+        LIMIT ?
+        """
+    )
+    return await fetch_all(conn, sql, (commodity, k))
+
+
 async def get_trend_max_risk(conn, commodity: str, start_year: int, end_year: int):
     sql = (
         """
-        SELECT year, hist_max_wapr
+        SELECT r.year, MAX(r.hist_max_wapr) AS hist_max_wapr
         FROM risk_global_avg_max r
         JOIN commodities com ON com.id = r.commodity_id
         WHERE com.name = ? AND r.year BETWEEN ? AND ?
+        GROUP BY r.year
         ORDER BY r.year ASC
         """
     )
     return await fetch_all(conn, sql, (commodity, start_year, end_year))
+
+
+async def get_trend_max_risk_overall(conn, start_year: int, end_year: int):
+    """Return absolute trend in maximum risk across ALL commodities by year.
+    For each year in range, pick the maximum hist_max_wapr across commodities.
+    """
+    sql = (
+        """
+        SELECT r.year, MAX(r.hist_max_wapr) AS hist_max_wapr
+        FROM risk_global_avg_max r
+        GROUP BY r.year
+        HAVING r.year BETWEEN ? AND ?
+        ORDER BY r.year ASC
+        """
+    )
+    return await fetch_all(conn, sql, (start_year, end_year))
 
 
 async def get_country_season_change(conn, country_code: str, commodity: str) -> Optional[dict[str, Any]]:
@@ -179,6 +213,52 @@ async def get_country_season_change(conn, country_code: str, commodity: str) -> 
         "previous_wapr": float(prev_wapr),
         "delta": delta,
         "direction": direction
+    }
+
+
+async def get_country_season_change_overall(conn, country_code: str) -> Optional[dict[str, Any]]:
+    """Compare latest two seasons for a country, aggregated across ALL commodities.
+    Aggregation method: average of this_year_avg_wapr per year.
+    """
+    sql = (
+        """
+        SELECT byc.year, AVG(byc.this_year_avg_wapr) AS avg_wapr
+        FROM climate_risk_by_country byc
+        JOIN countries ctry ON ctry.id = byc.country_id
+        WHERE ctry.code = ? AND byc.this_year_avg_wapr IS NOT NULL
+        GROUP BY byc.year
+        ORDER BY byc.year DESC
+        LIMIT 2
+        """
+    )
+    rows = await fetch_all(conn, sql, (country_code,))
+    if len(rows) < 1:
+        return None
+
+    latest = rows[0]
+    current_wapr = latest.get("avg_wapr")
+    if current_wapr is None:
+        return None
+
+    if len(rows) >= 2:
+        prev = rows[1]
+        prev_wapr = prev.get("avg_wapr")
+        if prev_wapr is not None:
+            delta = float(current_wapr) - float(prev_wapr)
+            direction = "increase" if delta > 0 else ("decrease" if delta < 0 else "no_change")
+        else:
+            return None
+    else:
+        return None
+
+    return {
+        "country_code": country_code,
+        "current_year": latest.get("year"),
+        "current_wapr_overall": float(current_wapr),
+        "previous_wapr_overall": float(prev_wapr),
+        "delta": delta,
+        "direction": direction,
+        "aggregation": "avg",
     }
 
 
@@ -275,6 +355,55 @@ async def get_eu_risk_comparison(conn, commodity: str, current_year: int, previo
         "previous_year": previous_year,
         "current_avg_wapr": float(current_wapr),
         "previous_avg_wapr": float(previous_wapr),
+        "delta": delta,
+        "percent_change": pct_change,
+        "trend": "increased" if delta > 0 else "decreased" if delta < 0 else "unchanged"
+    }
+
+
+async def get_eu_overall_risk_comparison(conn, current_year: int, previous_year: int) -> Optional[dict[str, Any]]:
+    """Aggregate EU risk across ALL commodities by averaging current WAPR.
+    Returns a comparison between two years.
+    """
+    # Current year overall
+    current_sql = (
+        """
+        SELECT AVG(byc.this_year_avg_wapr) as avg_wapr
+        FROM climate_risk_by_country byc
+        JOIN countries ctry ON ctry.id = byc.country_id
+        WHERE ctry.code = 'EU' AND byc.year = ? AND byc.this_year_avg_wapr IS NOT NULL
+        """
+    )
+    previous_sql = (
+        """
+        SELECT AVG(byc.this_year_avg_wapr) as avg_wapr
+        FROM climate_risk_by_country byc
+        JOIN countries ctry ON ctry.id = byc.country_id
+        WHERE ctry.code = 'EU' AND byc.year = ? AND byc.this_year_avg_wapr IS NOT NULL
+        """
+    )
+
+    current_row = await fetch_one(conn, current_sql, (current_year,))
+    previous_row = await fetch_one(conn, previous_sql, (previous_year,))
+
+    if not current_row or not previous_row:
+        return None
+
+    current_wapr = current_row.get("avg_wapr")
+    previous_wapr = previous_row.get("avg_wapr")
+
+    if current_wapr is None or previous_wapr is None:
+        return None
+
+    delta = float(current_wapr) - float(previous_wapr)
+    pct_change = (delta / float(previous_wapr) * 100.0) if float(previous_wapr) != 0 else None
+
+    return {
+        "region": "European Union",
+        "current_year": current_year,
+        "previous_year": previous_year,
+        "current_overall_avg_wapr": float(current_wapr),
+        "previous_overall_avg_wapr": float(previous_wapr),
         "delta": delta,
         "percent_change": pct_change,
         "trend": "increased" if delta > 0 else "decreased" if delta < 0 else "unchanged"

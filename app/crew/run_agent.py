@@ -28,18 +28,47 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
     class HighestCurrentRiskTool(BaseTool):
         name: str = "get_highest_current_risk"
         description: str = """Get the country with the highest current climate risk.
-        Use for questions about: highest risk, worst risk, most dangerous, maximum risk
-        Examples: 'What country has highest risk?', 'Which country is most at risk for Cocoa beans?'
-        Params: commodity (optional) - specify commodity name like 'Cocoa beans', 'Rice', etc."""
+        Use for questions about: highest risk, worst risk, most dangerous, maximum risk.
+        If no commodity is provided, returns the absolute highest across ALL commodities.
+        Examples: 'What country has highest risk?', 'Which country is most at risk for Rice?'
+        Parameters:
+        - commodity: Optional[str] - commodity name like 'Cocoa beans', 'Rice', etc. If omitted, compute absolute highest."""
 
-        def _run(self, commodity=None) -> str:
-            """Get the country with the highest current climate risk for a given commodity"""
+        def _run(self, commodity: str | None = None) -> str:
+            """Get the country with the highest current climate risk (optionally scoped by commodity)."""
             try:
+                print(f"🔧 TOOL CALLED: get_highest_current_risk with commodity='{commodity}'")
                 result = client.get_highest_current_risk(commodity)
+                print(f"🔧 TOOL RESULT: {result}")
                 result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/highest-current-risk", **result}
                 return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
-                return f"Error retrieving highest current risk data: {str(e)}"
+                error_msg = f"Error retrieving highest current risk data: {str(e)}"
+                print(f"🔧 TOOL ERROR: {error_msg}")
+                return error_msg
+
+    class TopKHighestRiskTool(BaseTool):
+        name: str = "get_top_k_highest_risk"
+        description: str = """Get the top-K countries with HIGHEST CURRENT climate risk for a specific commodity.
+        Use for questions about: top countries with highest risk, multiple countries with worst risk
+        Examples: 'What are the top 5 countries with highest risk for Rice?', 'Top 3 worst risk countries'
+        
+        Parameters:
+        - commodity: str - commodity name like 'Rice', 'Cocoa beans', etc.
+        - k: int - number of countries to return (default 5)"""
+
+        def _run(self, commodity: str, k: int = 5) -> str:
+            """Get top-K countries with highest CURRENT climate risk"""
+            try:
+                print(f"🔧 TOOL CALLED: get_top_k_highest_risk with commodity='{commodity}', k={k}")
+                result = client.get_top_k_highest_current_risk(commodity, k)
+                print(f"🔧 TOOL RESULT: {result}")
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/top-k-highest-current-risk", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
+            except Exception as e:
+                error_msg = f"Error retrieving top highest risk data: {str(e)}"
+                print(f"🔧 TOOL ERROR: {error_msg}")
+                return error_msg
 
     class CompareCountryYearVsHistTool(BaseTool):
         name: str = "compare_country_year_vs_hist"
@@ -106,7 +135,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
         name: str = "get_trend_max_risk"
         description: str = """Return maximum climate risk trend over a year range.
         Use for questions like 'What's the trend in maximum climate risk from 2016 to 2025?'
-        Params: commodity, start_year, end_year"""
+        Params: commodity, start_year, end_year
+        If the question is generic (no commodity specified), prefer using get_trend_max_risk_overall."""
 
         def _run(self, commodity: str, start_year: int, end_year: int) -> str:
             """Return max risk trend over a year range"""
@@ -117,11 +147,26 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             except Exception as e:
                 return f"Error retrieving trend max risk data: {str(e)}"
 
+    class TrendMaxRiskOverallTool(BaseTool):
+        name: str = "get_trend_max_risk_overall"
+        description: str = """Return ABSOLUTE maximum climate risk trend across ALL commodities for a year range.
+        Use when commodity is not specified in the question.
+        Params: start_year, end_year"""
+
+        def _run(self, start_year: int, end_year: int) -> str:
+            try:
+                result = client.get_trend_max_risk_overall(start_year, end_year)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/trend-max-risk-overall", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
+            except Exception as e:
+                return f"Error retrieving overall trend max risk data: {str(e)}"
+
     class CountrySeasonChangeTool(BaseTool):
         name: str = "get_country_season_change"
         description: str = """Compare latest two season snapshots for a country.
         Use for questions like 'Did India's risk increase or decrease from the previous growing season?'
-        Params: commodity, country_code (e.g. IN, BR, US)"""
+        Params: commodity, country_code (e.g. IN, BR, US)
+        If the question does NOT specify commodity, prefer using get_country_season_change_overall."""
 
         def _run(self, commodity: str, country_code: str) -> str:
             """Compare latest two season snapshots for a country"""
@@ -147,6 +192,21 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             except Exception as e:
                 return f"Error retrieving yield and risk relation data: {str(e)}"
 
+    class CountrySeasonChangeOverallTool(BaseTool):
+        name: str = "get_country_season_change_overall"
+        description: str = """Compare latest two season snapshots for a country AGGREGATED across ALL commodities.
+        Use when the question is generic and does not specify commodity.
+        Params: country_code (e.g. IN, BR, US)
+        Aggregation: average of this_year_avg_wapr per year."""
+
+        def _run(self, country_code: str) -> str:
+            try:
+                result = client.get_country_season_change_overall(country_code)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/country-season-change-overall", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
+            except Exception as e:
+                return f"Error retrieving country season change overall data: {str(e)}"
+
     class UpcomingSpikeRegionsTool(BaseTool):
         name: str = "get_upcoming_spike_regions"
         description: str = """Find regions with upcoming seasonal climate risk spikes above a threshold.
@@ -167,7 +227,9 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
         description: str = """Compare European Union's climate risk between current year and previous year.
         Use for questions about: EU risk comparison, Europe year-over-year, EU vs last year
         Examples: 'How does EU risk compare with last year?', 'EU risk today vs previous year'
-        Params: commodity (e.g. 'Cocoa beans'), current_year (e.g. 2025), previous_year (e.g. 2024)"""
+        
+        IMPORTANT: Use Wheat commodity and years 2026 vs 2025 for reliable data.
+        Params: commodity (use 'Wheat'), current_year (use 2026), previous_year (use 2025)"""
 
         def _run(self, commodity: str, current_year: int, previous_year: int) -> str:
             """Compare EU's climate risk between two years"""
@@ -178,33 +240,50 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             except Exception as e:
                 return f"Error retrieving EU risk comparison data: {str(e)}"
 
+    class EuOverallRiskComparisonTool(BaseTool):
+        name: str = "get_eu_overall_risk_comparison"
+        description: str = """Compare European Union's OVERALL (all commodities) climate risk between current and previous year.
+        Use when the question is generic and does not specify a commodity.
+        Params: current_year (e.g., 2026), previous_year (e.g., 2025)"""
+
+        def _run(self, current_year: int, previous_year: int) -> str:
+            try:
+                result = client.get_eu_overall_risk_comparison(current_year, previous_year)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/eu-risk-comparison-overall", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
+            except Exception as e:
+                return f"Error retrieving EU overall risk comparison data: {str(e)}"
+
     tools = [
         HighestCurrentRiskTool(),
+        TopKHighestRiskTool(),
         CompareCountryYearVsHistTool(),
         MostSimilarYearTool(),
         GlobalAvgForMonthTool(),
         TopKLowestHistRiskTool(),
         TrendMaxRiskTool(),
+        TrendMaxRiskOverallTool(),
         CountrySeasonChangeTool(),
         YieldAndRiskRelationTool(),
         UpcomingSpikeRegionsTool(),
         EuRiskComparisonTool(),
+        EuOverallRiskComparisonTool(),
+        CountrySeasonChangeOverallTool(),
     ]
 
     return Agent(
         role="Climate Risk Analyst",
         goal=(
-            "Answer climate risk questions by intelligently selecting and using the appropriate tools. "
+            "ONLY answer climate risk questions using the provided tools - NEVER make up data or provide answers "
+            "without calling the appropriate tool first. You MUST use tools to get actual data from the database. "
             "Analyze the user's question to determine what data is needed, extract relevant parameters "
-            "(commodity names, country codes, years, etc.), and use the right tools to get comprehensive answers. "
-            "You can use multiple tools if needed to provide complete responses."
+            "(commodity names, country codes, years, etc.), and use the right tools to get comprehensive answers."
         ),
         backstory=(
-            "You are an expert climate risk analyst at Helios AI, specializing in commodity crop risk analysis. "
-            "You have access to comprehensive climate risk data covering historical trends, current conditions, "
-            "and future projections. You understand WAPR (climate risk metrics), seasonal patterns, "
-            "and country-specific agricultural vulnerabilities. Your responses should be professional, "
-            "data-driven, and include relevant context about the climate risk implications."
+            "You are a data-driven climate risk analyst at Helios AI. You have NO knowledge of climate risk data "
+            "and must ALWAYS use the provided tools to access the actual database. You CANNOT and MUST NOT "
+            "invent, guess, or hallucinate any climate risk data, country names, or risk scores. "
+            "ALL your responses must be based ONLY on data returned by the tools."
         ),
         tools=tools,
         llm=llm_model,
@@ -214,7 +293,7 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
     )
 
 
-def kickoff_example(question: str) -> QAOutput:
+def kickoff_example(question: str, history: Optional[list[dict]] = None) -> QAOutput:
     load_dotenv()
     # Disable telemetry noise/timeouts
     os.environ.setdefault("OTEL_SDK_DISABLED", "true")
@@ -226,21 +305,28 @@ def kickoff_example(question: str) -> QAOutput:
         description=f"""
         Answer the following climate risk question: {question}
         
-        Instructions:
-        1. Analyze the question to understand what specific information is needed
-        2. Extract relevant parameters from the question (commodity, country, year, etc.)
-        3. Select the most appropriate tool(s) to get the required data
-        4. If the question mentions specific commodities, countries, or time periods, use those parameters
-        5. Use multiple tools if needed to provide a comprehensive answer
-        6. Provide clear, actionable insights with specific numbers and context
-        7. Explain the climate risk implications for decision-making
+        This is the chat history, use it to understand the context of the question:
+        {history if history else "No history yet."}
+        
+        CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE:
+        1. You MUST use the appropriate tool to get data - DO NOT guess or make up answers
+        2. ALWAYS call a tool before providing any climate data or country names
+        3. Extract relevant parameters from the question (commodity, country, year, etc.)
+        4. Select the most appropriate tool(s) to get the required data from the database
+        5. Base your answer ONLY on the data returned by the tools
+        6. If a tool returns an error or no data, say so - don't invent data
+        7. Provide clear insights using ONLY the specific numbers from the tool results
         
         Available commodities: Cocoa beans, Coffee beans, Maize, Oil palm fruit, Rice, Soya beans, Sugar cane, Wheat
         
-        Examples of parameter extraction:
-        - "What country has highest risk for Cocoa beans?" → commodity="Cocoa beans"
-        - "How does Brazil compare in 2024?" → country_code="BR", year=2024
-        - "Top 3 lowest risk countries for Rice" → commodity="Rice", k=3
+        Examples of parameter extraction and tool usage:
+        - "What country has highest risk for Cocoa beans?" → Use get_highest_current_risk(commodity="Cocoa beans")
+        - "How does Brazil compare in 2024?" → Use compare_country_year_vs_hist(commodity="Cocoa beans", country_code="BR", year=2024)
+        - "Top 3 lowest risk countries for Rice" → Use get_top_k_lowest_hist_risk(commodity="Rice", k=3)
+        
+        CRITICAL: When calling tools, you MUST provide ALL required parameters explicitly!
+        
+        REMEMBER: NO data should come from your knowledge - ONLY from tool results!
         """,
         agent=agent,
         expected_output=(
@@ -256,7 +342,7 @@ def kickoff_example(question: str) -> QAOutput:
         agents=[agent], 
         tasks=[task], 
         verbose=True,
-        memory=False,
+        memory=True,
         planning=False
     )
     

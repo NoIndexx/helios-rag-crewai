@@ -43,6 +43,10 @@ class CountrySeasonChangeRequest(BaseModel):
     country_code: str
 
 
+class CountrySeasonChangeOverallRequest(BaseModel):
+    country_code: str
+
+
 class YieldRiskRequest(BaseModel):
     commodity: str
     scope: str = Field(default="global")
@@ -63,5 +67,15 @@ class EuRiskComparisonRequest(BaseModel):
 class AnswerResponse(BaseModel):
     answer: Any
     params: Dict[str, Any]
+
+
+class EuOverallRiskComparisonRequest(BaseModel):
+    current_year: int
+    previous_year: int
+
+
+class TrendOverallRequest(BaseModel):
+    start_year: int
+    end_year: int
 
 

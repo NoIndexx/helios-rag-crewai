@@ -2,6 +2,13 @@ Helios Climate Risk — CrewAI + SQLite (FastAPI + Streamlit)
 
 Simple, fully local project with no external database dependency. Uses SQLite for persistence, FastAPI for a deterministic backend API, and Streamlit as an optional frontend. A single CrewAI agent calls the API via tools.
 
+From testing, most QeA questions were generic and did not specify a commodity.
+
+To improve answer accuracy, decide on one of the following behaviors:
+- Require the user to specify a commodity.
+- Default to absolute numbers when no commodity is provided, and use the specified commodity when present (already implemented for Question 1).
+- Let the model decide based on short‑term and long‑term memory (used in other endpoints).
+
 Project structure
 - `app/backend`: FastAPI, routers, queries, ingestion, database helpers, utils
 - `app/frontend`: Streamlit UI for real‑time demo
@@ -19,7 +26,7 @@ Setup (Windows PowerShell)
 3) Run API (FastAPI)
    uvicorn app.backend.main:app --host 0.0.0.0 --port 8000 --reload
 
-4) Run Streamlit (optional)
+4) Run Streamlit
    streamlit run app/frontend/streamlit_app.py
 
 CrewAI demo (optional)
@@ -31,14 +38,24 @@ API endpoints (base prefix: `/api/v1/query`)
 - POST `/most-similar-year`
 - POST `/global-avg-for-month`
 - POST `/top-k-lowest-hist-risk`
+- POST `/top-k-highest-current-risk`
 - POST `/trend-max-risk`
+- POST `/trend-max-risk-overall`
 - POST `/country-season-change`
+- POST `/country-season-change-overall`
 - POST `/yield-and-risk-relation`
 - POST `/upcoming-spike-regions`
+- POST `/eu-risk-comparison`
+- POST `/eu-risk-comparison-overall`
 
 Notes
 - Ingestion is idempotent (unique keys); re-run anytime to refresh data.
-- Streamlit and CrewAI tools call the same API. You can override the base URL via `API_BASE` env var.
+- Streamlit chat uses CrewAI, and the tools call the FastAPI. Only the optional "API Tests" tab in Streamlit calls the API directly for debugging. You can override the base URL via `API_BASE`.
+
+Environment variables:
+- OPENAI_MODEL_NAME=gpt-4o-mini
+- OPENAI_API_KEY=YOUR-API-KEY-HERE
+- API_BASE=http://localhost:8000
 
 Run with Docker
 1) Build
@@ -53,3 +70,17 @@ Run with Docker
 4) Access
 - API docs: http://localhost:8000/docs
 - Streamlit: http://localhost:8501
+
+### Next steps
+
+- **Model upgrade**: Use Claude 4 for higher-quality answers and more reliable tool calling.
+
+- **Tool calling policy**:
+  - Enforce absolute numbers or require the commodity name.
+  - Avoid generic questions that obscure intent and may auto-select a commodity.
+
+- **Centralized MCP (FastAPI)**: Create a single FastAPI service to host and expose all tools.
+
+- **Memory architecture**: Store short- and long-term memory in a vector database, partitioned by `thread_id`.
+
+- **Codebase refactor**: Keep only a FastAPI service dedicated to serving CrewAI logic; retire other components.

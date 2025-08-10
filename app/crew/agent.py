@@ -32,11 +32,20 @@ class CrewApiClient:
     def get_top_k_lowest_hist_risk(self, commodity: str, k: int = 3) -> dict[str, Any]:
         return self.post("/api/v1/query/top-k-lowest-hist-risk", {"commodity": commodity, "k": k})
 
+    def get_top_k_highest_current_risk(self, commodity: str, k: int = 5) -> dict[str, Any]:
+        return self.post("/api/v1/query/top-k-highest-current-risk", {"commodity": commodity, "k": k})
+
     def get_trend_max_risk(self, commodity: str, start_year: int, end_year: int) -> dict[str, Any]:
         return self.post("/api/v1/query/trend-max-risk", {"commodity": commodity, "start_year": start_year, "end_year": end_year})
 
+    def get_trend_max_risk_overall(self, start_year: int, end_year: int) -> dict[str, Any]:
+        return self.post("/api/v1/query/trend-max-risk-overall", {"start_year": start_year, "end_year": end_year})
+
     def get_country_season_change(self, commodity: str, country_code: str) -> dict[str, Any]:
         return self.post("/api/v1/query/country-season-change", {"commodity": commodity, "country_code": country_code})
+
+    def get_country_season_change_overall(self, country_code: str) -> dict[str, Any]:
+        return self.post("/api/v1/query/country-season-change-overall", {"country_code": country_code})
 
     def get_yield_and_risk_relation(self, commodity: str, scope: str = "global", country_code: Optional[str] = None) -> dict[str, Any]:
         return self.post("/api/v1/query/yield-and-risk-relation", {"commodity": commodity, "scope": scope, "country_code": country_code})
@@ -46,5 +55,8 @@ class CrewApiClient:
 
     def get_eu_risk_comparison(self, commodity: str, current_year: int, previous_year: int) -> dict[str, Any]:
         return self.post("/api/v1/query/eu-risk-comparison", {"commodity": commodity, "current_year": current_year, "previous_year": previous_year})
+
+    def get_eu_overall_risk_comparison(self, current_year: int, previous_year: int) -> dict[str, Any]:
+        return self.post("/api/v1/query/eu-risk-comparison-overall", {"current_year": current_year, "previous_year": previous_year})
 
 

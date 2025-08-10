@@ -45,125 +45,202 @@ tab_chat, tab_queries = st.tabs(["🤖 Chatbot", "🔧 API Tests"])
 with tab_chat:
     st.subheader("Climate Risk Chatbot")
     st.caption("Ask questions in natural language about climate risk data")
-    
+
     # Initialize chat session state
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    if "chat_prompt" not in st.session_state:
-        st.session_state.chat_prompt = ""
-    if "prefill_requested" not in st.session_state:
-        st.session_state.prefill_requested = False
-    if "prefill_value" not in st.session_state:
-        st.session_state.prefill_value = ""
+    if "pending_prompt" not in st.session_state:
+        st.session_state.pending_prompt = None
 
-    # Apply any pending prefill BEFORE the widget with key `chat_prompt` is instantiated
-    if st.session_state.prefill_requested:
-        st.session_state.chat_prompt = st.session_state.prefill_value
-        st.session_state.prefill_requested = False
+    # Inject CSS for chat bubble alignment (user right, assistant left)
+    st.markdown(
+        """
+        <style>
+        .chat-bubble { padding: 0.6rem 0.8rem; border-radius: 12px; margin: 0.25rem 0; max-width: 90%; }
+        .chat-user { background: #DCF8C6; color: #000; margin-left: auto; text-align: left; }
+        .chat-assistant { background: #F1F0F0; color: #000; margin-right: auto; text-align: left; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Display chat messages from history on app rerun
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-            if "source" in message and message["source"]:
-                with st.expander("📊 Data Source"):
-                    st.json(message["source"])
-            if "query" in message and message["query"]:
-                with st.expander("🔎 Query"):
-                    st.json(message["query"])
+    # Messages area (scrollable)
+    messages_container = st.container()
+    with messages_container:
+        for message in st.session_state.messages:
+            role = message.get("role", "assistant")
+            content = message.get("content", "")
+            source = message.get("source")
+            query = message.get("query")
 
-    # Message composer (supports prefill from example clicks)
-    with st.form("composer", clear_on_submit=False):
-        prompt_value = st.text_area(
-            "Your question",
-            key="chat_prompt",
-            placeholder=(
-                "Ask about climate risks... (e.g., 'What country has the highest current climate risk for Cocoa beans?')"
-            ),
-            label_visibility="collapsed",
-            height=80,
-        )
-        submitted = st.form_submit_button("Send", use_container_width=True)
+            if role == "user":
+                # Icon at right, bubble aligned to the right within main column
+                col_main, col_icon = st.columns([0.9, 0.1])
+                with col_main:
+                    st.markdown(f'<div class="chat-bubble chat-user">{content}</div>', unsafe_allow_html=True)
+                    if source:
+                        with st.expander("📊 Data Source"):
+                            st.json(source)
+                    if query:
+                        with st.expander("🔎 Query"):
+                            st.json(query)
+                with col_icon:
+                    st.markdown("🧑")
+            else:
+                # Icon at left, bubble on the left
+                col_icon, col_main = st.columns([0.1, 0.9])
+                with col_icon:
+                    st.markdown("🤖")
+                with col_main:
+                    st.markdown(f'<div class="chat-bubble chat-assistant">{content}</div>', unsafe_allow_html=True)
+                    if source:
+                        with st.expander("📊 Data Source"):
+                            st.json(source)
+                    if query:
+                        with st.expander("🔎 Query"):
+                            st.json(query)
 
-    # Submit only when user clicks Send
-    if submitted:
-        prompt_to_use = prompt_value if prompt_value else st.session_state.get("chat_prompt", "")
+    # Determine prompt source: sidebar example or user typing
+    pending = st.session_state.pending_prompt
+    user_prompt = pending if pending else st.chat_input(
+        "Ask about climate risk... (e.g., 'Which country has the highest current risk for Cocoa beans?')",
+        key="chat_input"
+    )
 
-        if prompt_to_use.strip():
-            # Add user message to chat history
-            st.session_state.messages.append({"role": "user", "content": prompt_to_use})
-
-            # Display user message in chat message container
-            with st.chat_message("user"):
-                st.markdown(prompt_to_use)
-
-            # Display assistant response in chat message container
-            with st.chat_message("assistant"):
-                with st.spinner("Analyzing climate data... (logs in terminal)"):
-                    try:
-                        from app.crew.run_agent import kickoff_example
-                        # CrewAI logs will stream to terminal/console
-                        result = kickoff_example(prompt_to_use)
-
-                        # Display the answer
-                        response = result.answer
-                        st.markdown(response)
-
-                        # Show data source if available
-                        if hasattr(result, 'source') and result.source:
-                            with st.expander("📊 Data Source"):
-                                st.json(result.source)
-
-                        # Show query metadata if available
-                        if hasattr(result, 'query') and result.query:
-                            with st.expander("🔎 Query"):
-                                st.json(result.query)
-
-                        # Add assistant response to chat history
-                        st.session_state.messages.append({
-                            "role": "assistant",
-                            "content": response,
-                            "source": getattr(result, 'source', None),
-                            "query": getattr(result, 'query', None),
-                        })
-
-                    except Exception as e:
-                        error_msg = f"Sorry, I encountered an error: {str(e)}"
-                        st.error(error_msg)
-                        st.session_state.messages.append({"role": "assistant", "content": error_msg})
-
-            # Clear the input field safely on next rerun (avoid mutating after widget instantiation)
-            st.session_state.prefill_value = ""
-            st.session_state.prefill_requested = True
-            st.rerun()
+    # React to prompt
+    if user_prompt:
+        # Reset pending flag (if any)
+        st.session_state.pending_prompt = None
+        # Add user message
+        st.session_state.messages.append({"role": "user", "content": user_prompt})
+        # Call agent
+        with st.spinner("Analyzing climate data... (see logs in terminal)"):
+            try:
+                from app.crew.run_agent import kickoff_example
+                history = st.session_state.get("messages", [])
+                result = kickoff_example(user_prompt, history=history)
+                response = result.answer
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response,
+                    "source": getattr(result, 'source', None),
+                    "query": getattr(result, 'query', None),
+                })
+            except Exception as e:
+                error_msg = f"Sorry, an error occurred: {str(e)}"
+                st.session_state.messages.append({"role": "assistant", "content": error_msg})
+        st.rerun()
 
     # Sidebar with example questions
     with st.sidebar:
         st.header("💡 Example Questions")
+        # Main example questions with expected answers
         example_questions = [
-            "What country has the highest current climate risk for Cocoa beans?",
-            "How does Brazil's 2025 climate risk compare to its historical average for Cocoa beans?",
-            "What year was most similar to this season for Oil palm fruit?",
-            "What's the global average climate risk for Cocoa beans in January 2025?",
-            "What are the top 3 countries with the lowest historical risk for Cocoa beans?",
-            "What's the trend in maximum climate risk for Cocoa beans from 2016 to 2025?",
-            "Did Brazil's risk increase or decrease from the previous growing season for Cocoa beans?",
-            "What is the current yield rating for Oil palm fruit and how does it relate to risk?",
-            "Which regions are showing a spike in upcoming seasonal risk for Rice?",
-            "How does the EU's risk for Wheat in 2026 compare with 2025?"
+            {
+                "question": "What country has the highest current climate risk?",
+                "expected": "Pakistan (PK) with 48.8 WAPR for Rice (absolute highest across all commodities)"
+            },
+            {
+                "question": "How does Brazil's 2025 climate risk compare to its 10-year average?",
+                "expected": "Brazil: 16.6 WAPR vs 14.2 historical (+16.9% increase)"
+            },
+            {
+                "question": "What year was most similar to this season in terms of climate risk?",
+                "expected": "2018 was most similar to 2025 growing season (Low risk, 3 stars)"
+            },
+            {
+                "question": "What's the global average climate risk forecast for September 2025?",
+                "expected": "Global avg: 26.4 WAPR, Global max: 56.1 WAPR for Cocoa beans"
+            },
+            {
+                "question": "How does the EU's risk today compare with last year?",
+                "expected": "EU Wheat unchanged: 23.5 WAPR (2026 vs 2025, delta: 0.0, trend: unchanged)"
+            },
+            {
+                "question": "What are the top 3 countries with the lowest historical risk?",
+                "expected": "1. Peru (13.4), 2. Brazil (14.2), 3. Ecuador (14.8)"
+            },
+            {
+                "question": "What's the trend in maximum climate risk from 2016 to 2025?",
+                "expected": "Declining trend: 100.0 WAPR (2016) → 56.1 WAPR (2025)"
+            },
+            {
+                "question": "Did India's risk increase or decrease from the previous growing season?",
+                "expected": "India unchanged: 38.0 WAPR (overall avg, 2026 vs 2025, delta: 0.0)"
+            },
+            {
+                "question": "What is the current yield rating and how does it relate to risk?",
+                "expected": "Oil palm: 'Good' yield, 2.88 mt/ha, 16.5 WAPR"
+            },
+            {
+                "question": "Which regions are showing a spike in upcoming seasonal risk?",
+                "expected": "Bangladesh (+4.9 diff, 41.2 upcoming), Brazil (+3.5 diff)"
+            }
         ]
         
-        for i, question in enumerate(example_questions):
-            if st.button(f"📝 {question}", key=f"example_{i}"):
-                # Request prefill; will be applied on next rerun before widget instantiation
-                st.session_state.prefill_value = question
-                st.session_state.prefill_requested = True
+        # Optional additional questions for testing
+        optional_questions = [
+            {
+                "question": "What are the top 5 countries with highest climate risk for Rice?",
+                "expected": "1. Pakistan (48.8), 2. US (45.4), 3. Myanmar (43.2)"
+            },
+            {
+                "question": "How does Indonesia's climate risk for Oil palm fruit compare between 2024 and 2025?",
+                "expected": "Only 2025 available: 11.5 WAPR vs 18.0 historical (-36.11%)"
+            },
+            {
+                "question": "What is the global production volume for Soya beans and its risk category?",
+                "expected": "Global yield: 2.74 mt/ha, Neutral rating, 27.4 WAPR"
+            }
+        ]
+        
+        # Initialize session state for showing expected answers
+        if "show_expected" not in st.session_state:
+            st.session_state.show_expected = {}
+        
+        for i, item in enumerate(example_questions, 1):
+            question = item["question"]
+            expected = item["expected"]
+            key = f"example_{i}"
+            
+            if st.button(f"📝 **Q{i}:** {question}", key=key):
+                # Queue prompt to be sent automatically
+                st.session_state.pending_prompt = question
+                st.session_state.show_expected[key] = True
                 st.rerun()
+            
+            # Show expected answer if this question was clicked
+            if st.session_state.show_expected.get(key, False):
+                st.info(f"📋 **Expected Answer:** {expected}")
         
         st.divider()
-        if st.button("🗑️ Clear Chat History"):
-            st.session_state.messages = []
-            st.rerun()
+        st.subheader("🔬 Optional Test Questions")
+        for i, item in enumerate(optional_questions, 1):
+            question = item["question"]
+            expected = item["expected"]
+            key = f"optional_{i}"
+            
+            if st.button(f"🧪 **T{i}:** {question}", key=key):
+                # Queue prompt to be sent automatically
+                st.session_state.pending_prompt = question
+                st.session_state.show_expected[key] = True
+                st.rerun()
+            
+            # Show expected answer if this question was clicked
+            if st.session_state.show_expected.get(key, False):
+                st.info(f"📋 **Expected Answer:** {expected}")
+        
+        st.divider()
+        col_clear1, col_clear2 = st.columns(2)
+        with col_clear1:
+            if st.button("🗑️ Clear Chat", use_container_width=True):
+                st.session_state.messages = []
+                st.rerun()
+        
+        with col_clear2:
+            if st.button("📋 Hide Answers", use_container_width=True):
+                st.session_state.show_expected = {}
+                st.rerun()
 
 with tab_queries:
     st.subheader("API Endpoint Testing")
@@ -216,6 +293,15 @@ with tab_queries:
             if st.button("Query", key="q5_btn"):
                 res = post("/api/v1/query/top-k-lowest-hist-risk", 
                           {"commodity": t_commodity, "k": int(t_k)})
+                st.json(res)
+
+        with st.expander("5b. Top-K highest current risk (NEW)"):
+            st.caption("Example: Top 5 countries with highest current risk for Rice")
+            th_commodity = st.text_input("Commodity", value="Rice", key="q5b_commodity")
+            th_k = st.number_input("K", value=5, min_value=1, max_value=10, key="q5b_k")
+            if st.button("Query", key="q5b_btn"):
+                res = post("/api/v1/query/top-k-highest-current-risk", 
+                          {"commodity": th_commodity, "k": int(th_k)})
                 st.json(res)
 
     with col2:
