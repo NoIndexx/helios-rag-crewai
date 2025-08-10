@@ -17,6 +17,7 @@ from .agent import CrewApiClient
 class QAOutput(BaseModel):
     answer: str = Field(description="The final answer to the user's question")
     source: dict[str, Any] = Field(default_factory=dict, description="Source data used to generate the answer")
+    query: dict[str, Any] = Field(default_factory=dict, description="Endpoint and parameters used to produce the answer")
 
 
 def create_agent(api_base: str = "http://localhost:8000") -> Agent:
@@ -35,7 +36,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             """Get the country with the highest current climate risk for a given commodity"""
             try:
                 result = client.get_highest_current_risk(commodity)
-                return json.dumps(result, ensure_ascii=False)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/highest-current-risk", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error retrieving highest current risk data: {str(e)}"
 
@@ -50,7 +52,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             """Compare a country's given year risk vs 10y historical average"""
             try:
                 result = client.compare_country_year_vs_hist(commodity, country_code, year)
-                return json.dumps(result, ensure_ascii=False)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/compare-country-year-vs-hist", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error comparing country year vs historical data: {str(e)}"
 
@@ -64,7 +67,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             """Get the most similar growing season year"""
             try:
                 result = client.get_most_similar_year(commodity, scope, country_code)
-                return json.dumps(result, ensure_ascii=False)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/most-similar-year", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error retrieving most similar year data: {str(e)}"
 
@@ -78,7 +82,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             """Get global average WAPR for a given month/year"""
             try:
                 result = client.get_global_avg_for_month(commodity, year, month)
-                return json.dumps(result, ensure_ascii=False)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/global-avg-for-month", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error retrieving global average for month data: {str(e)}"
 
@@ -92,7 +97,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             """List top-K countries with lowest historical risk"""
             try:
                 result = client.get_top_k_lowest_hist_risk(commodity, k)
-                return json.dumps(result, ensure_ascii=False)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/top-k-lowest-hist-risk", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error retrieving top lowest risk countries: {str(e)}"
 
@@ -106,7 +112,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             """Return max risk trend over a year range"""
             try:
                 result = client.get_trend_max_risk(commodity, start_year, end_year)
-                return json.dumps(result, ensure_ascii=False)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/trend-max-risk", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error retrieving trend max risk data: {str(e)}"
 
@@ -120,7 +127,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             """Compare latest two season snapshots for a country"""
             try:
                 result = client.get_country_season_change(commodity, country_code)
-                return json.dumps(result, ensure_ascii=False)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/country-season-change", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error retrieving country season change data: {str(e)}"
 
@@ -134,7 +142,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             """Return yield rating and its relation to risk"""
             try:
                 result = client.get_yield_and_risk_relation(commodity, scope, country_code)
-                return json.dumps(result, ensure_ascii=False)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/yield-and-risk-relation", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error retrieving yield and risk relation data: {str(e)}"
 
@@ -148,7 +157,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             """Find regions with upcoming seasonal spike above a threshold"""
             try:
                 result = client.get_upcoming_spike_regions(commodity, threshold)
-                return json.dumps(result, ensure_ascii=False)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/upcoming-spike-regions", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error retrieving upcoming spike regions data: {str(e)}"
 
@@ -163,7 +173,8 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
             """Compare EU's climate risk between two years"""
             try:
                 result = client.get_eu_risk_comparison(commodity, current_year, previous_year)
-                return json.dumps(result, ensure_ascii=False)
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/eu-risk-comparison", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
                 return f"Error retrieving EU risk comparison data: {str(e)}"
 
@@ -205,6 +216,10 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
 
 def kickoff_example(question: str) -> QAOutput:
     load_dotenv()
+    # Disable telemetry noise/timeouts
+    os.environ.setdefault("OTEL_SDK_DISABLED", "true")
+    os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+    os.environ.setdefault("CREWAI_TELEMETRY_DISABLED", "true")
     agent = create_agent(os.getenv("API_BASE", "http://localhost:8000"))
     
     task = Task(
@@ -229,8 +244,10 @@ def kickoff_example(question: str) -> QAOutput:
         """,
         agent=agent,
         expected_output=(
-            "A comprehensive answer that includes specific data points, time periods, "
-            "and clear explanation of climate risk implications for decision-making."
+            "A comprehensive answer that includes specific data points, time periods, and clear explanation of "
+            "climate risk implications for decision-making.\n\nAdditionally, ALWAYS return a 'query' object with: "
+            "'tool' (the tool you used), 'endpoint' (API path), 'params' (the exact parameters sent), and "
+            "'logic' (a brief explanation of why this tool and how each parameter maps into the request)."
         ),
         output_pydantic=QAOutput
     )

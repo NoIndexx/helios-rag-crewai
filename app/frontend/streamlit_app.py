@@ -68,6 +68,9 @@ with tab_chat:
             if "source" in message and message["source"]:
                 with st.expander("📊 Data Source"):
                     st.json(message["source"])
+            if "query" in message and message["query"]:
+                with st.expander("🔎 Query"):
+                    st.json(message["query"])
 
     # Message composer (supports prefill from example clicks)
     with st.form("composer", clear_on_submit=False):
@@ -110,11 +113,17 @@ with tab_chat:
                             with st.expander("📊 Data Source"):
                                 st.json(result.source)
 
+                        # Show query metadata if available
+                        if hasattr(result, 'query') and result.query:
+                            with st.expander("🔎 Query"):
+                                st.json(result.query)
+
                         # Add assistant response to chat history
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": response,
-                            "source": getattr(result, 'source', None)
+                            "source": getattr(result, 'source', None),
+                            "query": getattr(result, 'query', None),
                         })
 
                     except Exception as e:
