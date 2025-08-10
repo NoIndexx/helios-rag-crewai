@@ -293,7 +293,7 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
     )
 
 
-def kickoff_example(question: str) -> QAOutput:
+def kickoff_example(question: str, history: Optional[list[dict]] = None) -> QAOutput:
     load_dotenv()
     # Disable telemetry noise/timeouts
     os.environ.setdefault("OTEL_SDK_DISABLED", "true")
@@ -304,6 +304,9 @@ def kickoff_example(question: str) -> QAOutput:
     task = Task(
         description=f"""
         Answer the following climate risk question: {question}
+        
+        This is the chat history, use it to understand the context of the question:
+        {history if history else "No history yet."}
         
         CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE:
         1. You MUST use the appropriate tool to get data - DO NOT guess or make up answers
@@ -339,7 +342,7 @@ def kickoff_example(question: str) -> QAOutput:
         agents=[agent], 
         tasks=[task], 
         verbose=True,
-        memory=False,
+        memory=True,
         planning=False
     )
     

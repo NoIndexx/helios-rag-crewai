@@ -45,97 +45,91 @@ tab_chat, tab_queries = st.tabs(["🤖 Chatbot", "🔧 API Tests"])
 with tab_chat:
     st.subheader("Climate Risk Chatbot")
     st.caption("Ask questions in natural language about climate risk data")
-    
+
     # Initialize chat session state
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    if "chat_prompt" not in st.session_state:
-        st.session_state.chat_prompt = ""
-    if "prefill_requested" not in st.session_state:
-        st.session_state.prefill_requested = False
-    if "prefill_value" not in st.session_state:
-        st.session_state.prefill_value = ""
+    if "pending_prompt" not in st.session_state:
+        st.session_state.pending_prompt = None
 
-    # Apply any pending prefill BEFORE the widget with key `chat_prompt` is instantiated
-    if st.session_state.prefill_requested:
-        st.session_state.chat_prompt = st.session_state.prefill_value
-        st.session_state.prefill_requested = False
+    # Inject CSS for chat bubble alignment (user right, assistant left)
+    st.markdown(
+        """
+        <style>
+        .chat-bubble { padding: 0.6rem 0.8rem; border-radius: 12px; margin: 0.25rem 0; max-width: 90%; }
+        .chat-user { background: #DCF8C6; color: #000; margin-left: auto; text-align: left; }
+        .chat-assistant { background: #F1F0F0; color: #000; margin-right: auto; text-align: left; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Display chat messages from history on app rerun
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-            if "source" in message and message["source"]:
-                with st.expander("📊 Data Source"):
-                    st.json(message["source"])
-            if "query" in message and message["query"]:
-                with st.expander("🔎 Query"):
-                    st.json(message["query"])
+    # Messages area (scrollable)
+    messages_container = st.container()
+    with messages_container:
+        for message in st.session_state.messages:
+            role = message.get("role", "assistant")
+            content = message.get("content", "")
+            source = message.get("source")
+            query = message.get("query")
 
-    # Message composer (supports prefill from example clicks)
-    with st.form("composer", clear_on_submit=False):
-        prompt_value = st.text_area(
-            "Your question",
-            key="chat_prompt",
-            placeholder=(
-                "Ask about climate risks... (e.g., 'What country has the highest current climate risk for Cocoa beans?')"
-            ),
-            label_visibility="collapsed",
-            height=80,
-        )
-        submitted = st.form_submit_button("Send", use_container_width=True)
+            if role == "user":
+                # Icon at right, bubble aligned to the right within main column
+                col_main, col_icon = st.columns([0.9, 0.1])
+                with col_main:
+                    st.markdown(f'<div class="chat-bubble chat-user">{content}</div>', unsafe_allow_html=True)
+                    if source:
+                        with st.expander("📊 Data Source"):
+                            st.json(source)
+                    if query:
+                        with st.expander("🔎 Query"):
+                            st.json(query)
+                with col_icon:
+                    st.markdown("🧑")
+            else:
+                # Icon at left, bubble on the left
+                col_icon, col_main = st.columns([0.1, 0.9])
+                with col_icon:
+                    st.markdown("🤖")
+                with col_main:
+                    st.markdown(f'<div class="chat-bubble chat-assistant">{content}</div>', unsafe_allow_html=True)
+                    if source:
+                        with st.expander("📊 Data Source"):
+                            st.json(source)
+                    if query:
+                        with st.expander("🔎 Query"):
+                            st.json(query)
 
-    # Submit only when user clicks Send
-    if submitted:
-        prompt_to_use = prompt_value if prompt_value else st.session_state.get("chat_prompt", "")
+    # Determine prompt source: sidebar example or user typing
+    pending = st.session_state.pending_prompt
+    user_prompt = pending if pending else st.chat_input(
+        "Pergunte sobre riscos climáticos... (ex.: 'Qual país tem o maior risco atual para Cocoa beans?')",
+        key="chat_input"
+    )
 
-        if prompt_to_use.strip():
-            # Add user message to chat history
-            st.session_state.messages.append({"role": "user", "content": prompt_to_use})
-
-            # Display user message in chat message container
-            with st.chat_message("user"):
-                st.markdown(prompt_to_use)
-
-            # Display assistant response in chat message container
-            with st.chat_message("assistant"):
-                with st.spinner("Analyzing climate data... (logs in terminal)"):
-                    try:
-                        from app.crew.run_agent import kickoff_example
-                        # CrewAI logs will stream to terminal/console
-                        result = kickoff_example(prompt_to_use)
-
-                        # Display the answer
-                        response = result.answer
-                        st.markdown(response)
-
-                        # Show data source if available
-                        if hasattr(result, 'source') and result.source:
-                            with st.expander("📊 Data Source"):
-                                st.json(result.source)
-
-                        # Show query metadata if available
-                        if hasattr(result, 'query') and result.query:
-                            with st.expander("🔎 Query"):
-                                st.json(result.query)
-
-                        # Add assistant response to chat history
-                        st.session_state.messages.append({
-                            "role": "assistant",
-                            "content": response,
-                            "source": getattr(result, 'source', None),
-                            "query": getattr(result, 'query', None),
-                        })
-
-                    except Exception as e:
-                        error_msg = f"Sorry, I encountered an error: {str(e)}"
-                        st.error(error_msg)
-                        st.session_state.messages.append({"role": "assistant", "content": error_msg})
-
-            # Clear the input field safely on next rerun (avoid mutating after widget instantiation)
-            st.session_state.prefill_value = ""
-            st.session_state.prefill_requested = True
-            st.rerun()
+    # React to prompt
+    if user_prompt:
+        # Reset pending flag (if any)
+        st.session_state.pending_prompt = None
+        # Add user message
+        st.session_state.messages.append({"role": "user", "content": user_prompt})
+        # Call agent
+        with st.spinner("Analisando dados climáticos... (logs no terminal)"):
+            try:
+                from app.crew.run_agent import kickoff_example
+                history = st.session_state.get("messages", [])
+                result = kickoff_example(user_prompt, history=history)
+                response = result.answer
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response,
+                    "source": getattr(result, 'source', None),
+                    "query": getattr(result, 'query', None),
+                })
+            except Exception as e:
+                error_msg = f"Desculpe, houve um erro: {str(e)}"
+                st.session_state.messages.append({"role": "assistant", "content": error_msg})
+        st.rerun()
 
     # Sidebar with example questions
     with st.sidebar:
@@ -210,10 +204,8 @@ with tab_chat:
             key = f"example_{i}"
             
             if st.button(f"📝 **Q{i}:** {question}", key=key):
-                # Request prefill; will be applied on next rerun before widget instantiation
-                st.session_state.prefill_value = question
-                st.session_state.prefill_requested = True
-                # Show expected answer for this question
+                # Queue prompt to be sent automatically
+                st.session_state.pending_prompt = question
                 st.session_state.show_expected[key] = True
                 st.rerun()
             
@@ -229,10 +221,8 @@ with tab_chat:
             key = f"optional_{i}"
             
             if st.button(f"🧪 **T{i}:** {question}", key=key):
-                # Request prefill; will be applied on next rerun before widget instantiation
-                st.session_state.prefill_value = question
-                st.session_state.prefill_requested = True
-                # Show expected answer for this question
+                # Queue prompt to be sent automatically
+                st.session_state.pending_prompt = question
                 st.session_state.show_expected[key] = True
                 st.rerun()
             
