@@ -43,7 +43,7 @@ API endpoints (base prefix: `/api/v1/query`)
 
 Notes
 - Ingestion is idempotent (unique keys); re-run anytime to refresh data.
-- Streamlit and CrewAI tools call the same API. You can override the base URL via `API_BASE` env var.
+- Streamlit chat uses CrewAI, and the tools call the FastAPI. Only the optional "API Tests" tab in Streamlit calls the API directly for debugging. You can override the base URL via `API_BASE`.
 
 Environment variables:
 - OPENAI_MODEL_NAME=gpt-4o-mini
