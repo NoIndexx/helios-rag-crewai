@@ -27,19 +27,32 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
     # Tool classes following CrewAI best practices
     class HighestCurrentRiskTool(BaseTool):
         name: str = "get_highest_current_risk"
-        description: str = """Get the country with the highest current climate risk.
+        description: str = """Get the country with the highest current climate risk for a specific commodity.
         Use for questions about: highest risk, worst risk, most dangerous, maximum risk
-        Examples: 'What country has highest risk?', 'Which country is most at risk for Cocoa beans?'
-        Params: commodity (optional) - specify commodity name like 'Cocoa beans', 'Rice', etc."""
+        Examples: 'What country has highest risk for Cocoa beans?', 'Which country is most at risk for Rice?'
+        
+        Required Parameters:
+        - commodity: str - MUST specify commodity name like 'Cocoa beans', 'Rice', 'Wheat', etc.
+        
+        IMPORTANT: Always provide the commodity parameter when using this tool."""
 
-        def _run(self, commodity=None) -> str:
+        def _run(self, commodity: str) -> str:
             """Get the country with the highest current climate risk for a given commodity"""
             try:
+                if not commodity or commodity.strip() == "":
+                    error_msg = "ERROR: commodity parameter is required and cannot be empty. Please specify a commodity like 'Cocoa beans', 'Rice', etc."
+                    print(f"🔧 TOOL ERROR: {error_msg}")
+                    return error_msg
+                    
+                print(f"🔧 TOOL CALLED: get_highest_current_risk with commodity='{commodity}'")
                 result = client.get_highest_current_risk(commodity)
+                print(f"🔧 TOOL RESULT: {result}")
                 result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/highest-current-risk", **result}
                 return json.dumps(result_with_meta, ensure_ascii=False)
             except Exception as e:
-                return f"Error retrieving highest current risk data: {str(e)}"
+                error_msg = f"Error retrieving highest current risk data: {str(e)}"
+                print(f"🔧 TOOL ERROR: {error_msg}")
+                return error_msg
 
     class CompareCountryYearVsHistTool(BaseTool):
         name: str = "compare_country_year_vs_hist"
@@ -194,17 +207,16 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
     return Agent(
         role="Climate Risk Analyst",
         goal=(
-            "Answer climate risk questions by intelligently selecting and using the appropriate tools. "
+            "ONLY answer climate risk questions using the provided tools - NEVER make up data or provide answers "
+            "without calling the appropriate tool first. You MUST use tools to get actual data from the database. "
             "Analyze the user's question to determine what data is needed, extract relevant parameters "
-            "(commodity names, country codes, years, etc.), and use the right tools to get comprehensive answers. "
-            "You can use multiple tools if needed to provide complete responses."
+            "(commodity names, country codes, years, etc.), and use the right tools to get comprehensive answers."
         ),
         backstory=(
-            "You are an expert climate risk analyst at Helios AI, specializing in commodity crop risk analysis. "
-            "You have access to comprehensive climate risk data covering historical trends, current conditions, "
-            "and future projections. You understand WAPR (climate risk metrics), seasonal patterns, "
-            "and country-specific agricultural vulnerabilities. Your responses should be professional, "
-            "data-driven, and include relevant context about the climate risk implications."
+            "You are a data-driven climate risk analyst at Helios AI. You have NO knowledge of climate risk data "
+            "and must ALWAYS use the provided tools to access the actual database. You CANNOT and MUST NOT "
+            "invent, guess, or hallucinate any climate risk data, country names, or risk scores. "
+            "ALL your responses must be based ONLY on data returned by the tools."
         ),
         tools=tools,
         llm=llm_model,
@@ -226,21 +238,25 @@ def kickoff_example(question: str) -> QAOutput:
         description=f"""
         Answer the following climate risk question: {question}
         
-        Instructions:
-        1. Analyze the question to understand what specific information is needed
-        2. Extract relevant parameters from the question (commodity, country, year, etc.)
-        3. Select the most appropriate tool(s) to get the required data
-        4. If the question mentions specific commodities, countries, or time periods, use those parameters
-        5. Use multiple tools if needed to provide a comprehensive answer
-        6. Provide clear, actionable insights with specific numbers and context
-        7. Explain the climate risk implications for decision-making
+        CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE:
+        1. You MUST use the appropriate tool to get data - DO NOT guess or make up answers
+        2. ALWAYS call a tool before providing any climate data or country names
+        3. Extract relevant parameters from the question (commodity, country, year, etc.)
+        4. Select the most appropriate tool(s) to get the required data from the database
+        5. Base your answer ONLY on the data returned by the tools
+        6. If a tool returns an error or no data, say so - don't invent data
+        7. Provide clear insights using ONLY the specific numbers from the tool results
         
         Available commodities: Cocoa beans, Coffee beans, Maize, Oil palm fruit, Rice, Soya beans, Sugar cane, Wheat
         
-        Examples of parameter extraction:
-        - "What country has highest risk for Cocoa beans?" → commodity="Cocoa beans"
-        - "How does Brazil compare in 2024?" → country_code="BR", year=2024
-        - "Top 3 lowest risk countries for Rice" → commodity="Rice", k=3
+        Examples of parameter extraction and tool usage:
+        - "What country has highest risk for Cocoa beans?" → Use get_highest_current_risk(commodity="Cocoa beans")
+        - "How does Brazil compare in 2024?" → Use compare_country_year_vs_hist(commodity="Cocoa beans", country_code="BR", year=2024)
+        - "Top 3 lowest risk countries for Rice" → Use get_top_k_lowest_hist_risk(commodity="Rice", k=3)
+        
+        CRITICAL: When calling tools, you MUST provide ALL required parameters explicitly!
+        
+        REMEMBER: NO data should come from your knowledge - ONLY from tool results!
         """,
         agent=agent,
         expected_output=(
