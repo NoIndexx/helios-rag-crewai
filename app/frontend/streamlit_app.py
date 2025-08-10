@@ -75,11 +75,12 @@ with tab_chat:
     # Message composer (supports prefill from example clicks)
     with st.form("composer", clear_on_submit=False):
         prompt_value = st.text_area(
-            "",
+            "Your question",
             key="chat_prompt",
             placeholder=(
                 "Ask about climate risks... (e.g., 'What country has the highest current climate risk for Cocoa beans?')"
             ),
+            label_visibility="collapsed",
             height=80,
         )
         submitted = st.form_submit_button("Send", use_container_width=True)
