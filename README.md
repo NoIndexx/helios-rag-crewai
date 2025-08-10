@@ -45,9 +45,10 @@ Notes
 - Ingestion is idempotent (unique keys); re-run anytime to refresh data.
 - Streamlit and CrewAI tools call the same API. You can override the base URL via `API_BASE` env var.
 
-Environment variables
-- `API_BASE`: Base URL used by Streamlit and CrewAI tools. Default: `http://localhost:8000`.
-- `OPENAI_MODEL_NAME`: LLM name for the CrewAI agent. Default: `gpt-4o-mini`.
+Environment variables:
+- OPENAI_MODEL_NAME=gpt-4o-mini
+- OPENAI_API_KEY=YOUR-API-KEY-HERE
+- API_BASE=http://localhost:8000
 
 Run with Docker
 1) Build
