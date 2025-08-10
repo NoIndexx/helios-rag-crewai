@@ -9,6 +9,8 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
+# Fix for Pydantic forward references in tools
+
 from .agent import CrewApiClient
 
 
@@ -29,7 +31,7 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
         Examples: 'What country has highest risk?', 'Which country is most at risk for Cocoa beans?'
         Params: commodity (optional) - specify commodity name like 'Cocoa beans', 'Rice', etc."""
 
-        def _run(self, commodity: Optional[str] = None) -> str:
+        def _run(self, commodity=None) -> str:
             """Get the country with the highest current climate risk for a given commodity"""
             try:
                 result = client.get_highest_current_risk(commodity)
@@ -58,7 +60,7 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
         Use for questions like 'What year was most similar to this season in terms of climate risk?'
         Params: commodity, scope ('global' or 'country'), country_code (optional, required if scope='country')"""
 
-        def _run(self, commodity: str, scope: str = "global", country_code: Optional[str] = None) -> str:
+        def _run(self, commodity: str, scope: str = "global", country_code=None) -> str:
             """Get the most similar growing season year"""
             try:
                 result = client.get_most_similar_year(commodity, scope, country_code)
@@ -128,7 +130,7 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
         Use for questions like 'What is the current yield rating and how does it relate to risk?'
         Params: commodity, scope ('global' or 'country'), country_code (optional, required if scope='country')"""
 
-        def _run(self, commodity: str, scope: str = "global", country_code: Optional[str] = None) -> str:
+        def _run(self, commodity: str, scope: str = "global", country_code=None) -> str:
             """Return yield rating and its relation to risk"""
             try:
                 result = client.get_yield_and_risk_relation(commodity, scope, country_code)

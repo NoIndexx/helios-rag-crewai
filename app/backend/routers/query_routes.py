@@ -49,7 +49,8 @@ async def most_similar_year(req: SimilarYearRequest, db=Depends(get_db)):
 @router.post("/global-avg-for-month", response_model=AnswerResponse)
 async def global_avg_for_month(req: GlobalMonthAvgRequest, db=Depends(get_db)):
     result = await queries.get_global_avg_for_month(db, req.commodity, req.year, req.month)
-    if not result or result.get("monthly_avg_wapr") is None:
+    # result contains keys: global_avg_wapr, global_max_wapr, year, month, region
+    if result is None or result.get("global_avg_wapr") is None:
         raise HTTPException(status_code=404, detail="No data available for given month")
     return {"answer": result, "params": req.model_dump()}
 

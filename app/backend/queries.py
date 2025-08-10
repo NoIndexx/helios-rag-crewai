@@ -10,18 +10,18 @@ async def get_highest_current_risk(conn, commodity: Optional[str] = None) -> Opt
     sql = (
         """
         SELECT ctry.name AS country_name, ctry.code AS country_code,
-               com.name AS commodity, r.this_year_wapr, r.hist_wapr, r.date_on
-        FROM risk_current_vs_hist r
-        JOIN countries ctry ON ctry.id = r.country_id
-        JOIN commodities com ON com.id = r.commodity_id
-        WHERE r.season_status = 'in-season'
+               com.name AS commodity, byc.this_year_avg_wapr, byc.hist_avg_wapr, byc.year
+        FROM climate_risk_by_country byc
+        JOIN countries ctry ON ctry.id = byc.country_id
+        JOIN commodities com ON com.id = byc.commodity_id
+        WHERE byc.this_year_avg_wapr IS NOT NULL
         """
     )
     if commodity:
         sql += " AND com.name = ?"
         params.append(commodity)
-    # SQLite orders NULLs last when using DESC on numeric columns; no NULLS LAST support
-    sql += " ORDER BY r.this_year_wapr DESC, r.date_on DESC LIMIT 1"
+    # Order by highest current risk
+    sql += " ORDER BY byc.this_year_avg_wapr DESC, byc.year DESC LIMIT 1"
     return await fetch_one(conn, sql, tuple(params))
 
 
@@ -78,19 +78,27 @@ async def get_most_similar_year(conn, commodity: str, scope: str = "global", cou
 
 
 async def get_global_avg_for_month(conn, commodity: str, year: int, month: int) -> Optional[dict[str, Any]]:
-    # Approximation: average of this_year_wapr for GLB records in the given month/year
+    # Get global average climate risk data for a specific year (month is approximated to year)
     sql = (
         """
-        SELECT AVG(r.this_year_wapr) AS monthly_avg_wapr,
-               MIN(r.date_on) AS start_date, MAX(r.date_on) AS end_date
-        FROM risk_current_vs_hist r
+        SELECT r.hist_avg_wapr as monthly_avg_wapr, r.hist_max_wapr, r.year
+        FROM risk_global_avg_max r
         JOIN commodities com ON com.id = r.commodity_id
         JOIN countries ctry ON ctry.id = r.country_id
-        WHERE com.name = ? AND ctry.code = 'GLB' AND substr(r.date_on,1,7) = ?
+        WHERE com.name = ? AND ctry.code = 'GLB' AND r.year = ?
         """
     )
-    ym = f"{year:04d}-{month:02d}"
-    return await fetch_one(conn, sql, (commodity, ym))
+    row = await fetch_one(conn, sql, (commodity, year))
+    if not row:
+        return None
+    return {
+        "commodity": commodity,
+        "year": year,
+        "month": month,
+        "global_avg_wapr": row.get("monthly_avg_wapr"),
+        "global_max_wapr": row.get("hist_max_wapr"),
+        "region": "Global"
+    }
 
 
 async def get_top_k_lowest_hist_risk(conn, commodity: str, k: int = 3):
@@ -122,27 +130,56 @@ async def get_trend_max_risk(conn, commodity: str, start_year: int, end_year: in
 
 
 async def get_country_season_change(conn, country_code: str, commodity: str) -> Optional[dict[str, Any]]:
-    # Take the two latest snapshots by date_on and compare this_year_wapr
+    # Compare current year vs historical average to determine trend
     sql = (
         """
-        SELECT r.this_year_wapr, r.date_on
-        FROM risk_current_vs_hist r
-        JOIN commodities com ON com.id = r.commodity_id
-        JOIN countries ctry ON ctry.id = r.country_id
+        SELECT byc.year, byc.this_year_avg_wapr, byc.hist_avg_wapr
+        FROM climate_risk_by_country byc
+        JOIN commodities com ON com.id = byc.commodity_id
+        JOIN countries ctry ON ctry.id = byc.country_id
         WHERE com.name = ? AND ctry.code = ?
-        ORDER BY r.date_on DESC
+        ORDER BY byc.year DESC
         LIMIT 2
         """
     )
     rows = await fetch_all(conn, sql, (commodity, country_code))
-    if len(rows) < 2:
+    if len(rows) < 1:
         return None
-    curr, prev = rows[0], rows[1]
-    if curr["this_year_wapr"] is None or prev["this_year_wapr"] is None:
-        return {"delta": None, "direction": None, "current": curr, "previous": prev}
-    delta = float(curr["this_year_wapr"]) - float(prev["this_year_wapr"])
-    direction = "increase" if delta > 0 else ("decrease" if delta < 0 else "no_change")
-    return {"delta": delta, "direction": direction, "current": curr, "previous": prev}
+    
+    latest = rows[0]
+    current_wapr = latest.get("this_year_avg_wapr") 
+    hist_avg = latest.get("hist_avg_wapr")
+    
+    if current_wapr is None or hist_avg is None:
+        return None
+        
+    # If we have 2 years, compare them directly
+    if len(rows) >= 2:
+        prev = rows[1]
+        prev_wapr = prev.get("this_year_avg_wapr")
+        if prev_wapr is not None:
+            delta = float(current_wapr) - float(prev_wapr)
+            direction = "increase" if delta > 0 else ("decrease" if delta < 0 else "no_change")
+        else:
+            # Fallback to current vs historical average
+            delta = float(current_wapr) - float(hist_avg)
+            direction = "increase" if delta > 0 else ("decrease" if delta < 0 else "no_change")
+            prev_wapr = hist_avg
+    else:
+        # Only one year, compare current vs historical average
+        delta = float(current_wapr) - float(hist_avg)
+        direction = "increase" if delta > 0 else ("decrease" if delta < 0 else "no_change")
+        prev_wapr = hist_avg
+    
+    return {
+        "commodity": commodity,
+        "country_code": country_code,
+        "current_year": latest.get("year"),
+        "current_wapr": float(current_wapr),
+        "previous_wapr": float(prev_wapr),
+        "delta": delta,
+        "direction": direction
+    }
 
 
 async def get_yield_and_risk_relation(conn, commodity: str, scope: str = "global", country_code: Optional[str] = None):
