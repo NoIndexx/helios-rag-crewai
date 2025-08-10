@@ -1,0 +1,153 @@
+Senior Data Science Technical Challenge
+Climate Risk Chatbot
+Background
+Helios AI is an intelligence platform built to help global supply chain stakeholders anticipate and
+respond to climate-related disruptions. We focus especially on commodity crop risk, combining
+satellite data, climate forecasts, historical trends, and proprietary models to deliver early
+warnings and strategic insights.
+Our platform serves traders, agribusinesses, and governments who rely on timely, data-driven
+decisions about crop yield, climate volatility, and global production. We use machine learning
+and geospatial analytics to forecast everything from droughts in Brazil to flood risks in Southeast
+Asia — and how those risks impact food security and pricing.
+This challenge is based on a real section of our product — the Commodity Climate Risk
+dashboard — where we synthesize climate volatility, seasonality, and regional crop exposure
+into interactive visual summaries.
+Objective
+Create a chatbot agent using Crew AI that can answer a fixed set of 10 predefined user
+questions based on data from our Commodity Climate Risk page (screenshot below).
+Your chatbot should:
+○ Parse the provided climate risk data via API (endpoints listed below).
+
+Endpoints and Field Descriptions
+
+Climate risk by country - Link: https://helios-ds-tech-interview.proxy.beeceptor.com/get-climate-risk-by-country
+redis_key: Cache key for the record
+commodity: Name of the commodity or crop
+country_code: ISO country code
+country_name: Name of the country
+year: Year
+hist_avg_wapr: Historical average WAPR (climate risk metric) for the given year
+this_year_avg_wapr: WAPR (climate risk metric) for the current year
+current_season: True if the crop is currently in season
+most_recent_season: True if this_year_avg_wapr is for the most recent season
+upcoming_season: True if this_year_avg_wapr is for the upcoming season
+just_ended_season: True if this_year_avg_wapr is for a season that ended within the last 30 days
+
+Climate Risk Compared to Historical Avg Box - Link: https://helios-ds-tech-interview.proxy.beeceptor.com/get-climate-risk-compared-to-hist-avg-box
+redis_key: Cache key for the record
+commodity: Name of the commodity or crop
+country_name: Name of the country
+country_code: ISO country code
+hist_risk_score: Historical average risk score for the last 10 years
+this_year_risk_score: Climate risk score for the current or just-ended season
+avg_risk_score_diff: Difference between this_year_risk_score and hist_risk_score
+upcoming_year_risk_score: Climate risk score for the upcoming year/season
+risk_level: Climate risk level comparing historical vs current/just-ended/upcoming season
+current_season: True if the record pertains to the current season
+just_ended_season: True if the record pertains to a season that just ended
+upcoming_season: True if the record pertains to the upcoming season
+
+Climate Risk Current vs Historical - Link: https://helios-ds-tech-interview.proxy.beeceptor.com/get-climate-risk-current-vs-hist
+redis_key: Cache key for the record
+commodity: Name of the commodity or crop
+country_name: Name of the country
+hist_wapr: Historical average WAPR for the last 10 years
+this_year_wapr: WAPR (climate risk metric) for the current year
+std_upper: Upper bound of historical WAPR (e.g., +1σ)
+std_lower: Lower bound of historical WAPR (e.g., −1σ)
+date_on: Date (YYYY-MM-DD)
+season_status: The season status on that date (e.g., in-season)
+
+Climate Risk Global Avg/Max - Link: https://helios-ds-tech-interview.proxy.beeceptor.com/get-climate-risk-global-avg-max
+redis_key: Cache key for the record
+commodity: Name of the commodity or crop
+country_name: Name of the country
+country_code: ISO country code
+hist_max_wapr: The max historical WAPR for the given year
+hist_avg_wapr: The average historical WAPR for the given year
+year: Year
+current_season: True if the given year is the current year/season
+past_season: True if the given year is a past year/season
+upcoming_season: True if the given year is the upcoming year/season
+
+Climate Risk Most Similar Year - Link: https://helios-ds-tech-interview.proxy.beeceptor.com/get-climate-risk-most-similar-year
+redis_key: Cache key for the record
+commodity: Name of the commodity or crop
+most_similar_growing_season_year: The year most similar to the current reference year
+hist_avg_wapr_of_most_similar_year: WAPR for the most similar year
+risk_category: The climate risk category (e.g., Low)
+star_rating: Rating of the given year (1-5), where 5 is best
+total_production: Total production
+total_area_harvested: Total area harvested
+country_name: Name of the country or Global
+country_code: ISO country code (e.g., GLB for Global)
+current_season: True if the given year is currently in season
+upcoming_season: True if the given year is the upcoming season
+just_ended_season: True if the given year is a season that just ended in the last 30 days
+this_growing_season_year: The current growing season year
+total_yield: Total yield for the given year
+total_yield_unit: Unit of total yield (e.g., mt/ha)
+yield_rating: Yield rating for the given year (e.g., Good)
+total_production_unit: Unit of total production (e.g., mt)
+total_area_harvested_unit: Unit of total area harvested (e.g., ha)
+
+● Use Crew AI to build AI agent teams that work together to answer user questions
+accurately and contextually.
+● Provide answers in natural language. Bonus if they can produce graphs and charts!
+● Be containerized or scriptable so it’s easy for us to run and test.
+Task Details
+1. Chatbot Functionality
+● Build a Crew AI agent or Crew that uses tools or memory to ingest our API data.
+● Your agent should be able to answer 10 prewritten questions (see example set below).
+● Assume a single dataset or set of endpoints covering: historical climate risk, current
+season data, per-country summaries, etc.
+2. Example Questions
+You may adjust these or come up with similar ones:
+1. What country has the highest current climate risk?
+2. How does Brazil’s 2025 climate risk compare to its 10-year average?
+3. What year was most similar to this season in terms of climate risk?
+4. What’s the global average climate risk forecast for September 2025?
+5. How does the EU’s risk today compare with last year?
+6. What are the top 3 countries with the lowest historical risk?
+7. What’s the trend in maximum climate risk from 2016 to 2025?
+8. Did India’s risk increase or decrease from the previous growing season?
+9. What is the current yield rating and how does it relate to risk?
+10. Which regions are showing a spike in upcoming seasonal risk?
+We'll be testing how well your bot handles these questions directly via terminal or API calls.
+3. Submission Requirements
+● Create a private GitHub repo and invite the following reviewers (e@helios.sc,
+chhayly.sreng@helios.sc , nathan.longoni@helios.sc ).
+● Include:
+○ Crew AI logic / script
+○ A document with the bots answers to all the questions as well as the QAed result
+(always verify for response accuracy!)
+○ requirements.txt or pyproject.toml
+○ One PR submission for a small self-made “bug fix” or “feature” — just to show
+you understand Git hygiene
+○ README.md with:
+■ Setup instructions
+■ Explanation of your approach
+■ How you would expand the bot to handle more dynamic or conversational
+queries
+● Preferably Dockerized or easily run via main.py
+Timeline
+● You’ll have 7 days to complete the challenge once we send the API endpoints.
+● Need more time? Just let us know in advance.
+Evaluation Criteria
+● Functionality: Answers are accurate, relevant, and formatted clearly.
+● Engineering: Clean, modular code structure.
+● Git practices: Repo hygiene and quality of your pull request.
+● Thoughtfulness: README and code comments help us understand your reasoning.
+● Bonus: Use of tools, memory, or retrieval plugins inside Crew AI to optimize bot
+performance.
+Support and Resources
+Helios will provide access to necessary computational resources and datasets. You will also
+have access to a mentor for guidance and to address any technical questions or challenges.
+Mentors
+Eden Canlilar: e@helios.sc
+Chhayly Sreng: chhayly.sreng@helios.sc
+Conclusion
+This project aims to harness the potential of Generative AI in a real-world application while
+fostering a learning environment for you. By focusing on the thought process and
+problem-solving strategies, Helios seeks to cultivate innovative thinking and technical expertise
+that align with our mission of advancing AI applications in business intelligence.

@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    image: helios-api:local
+    container_name: helios_api
+    command: uvicorn app.backend.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    environment:
+      - API_BASE=http://api:8000
+
+  streamlit:
+    build: .
+    image: helios-streamlit:local
+    container_name: helios_streamlit
+    command: streamlit run app/frontend/streamlit_app.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./:/app
+    environment:
+      - API_BASE=http://api:8000
+    depends_on:
+      - api
+
+
