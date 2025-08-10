@@ -2,6 +2,13 @@ Helios Climate Risk — CrewAI + SQLite (FastAPI + Streamlit)
 
 Simple, fully local project with no external database dependency. Uses SQLite for persistence, FastAPI for a deterministic backend API, and Streamlit as an optional frontend. A single CrewAI agent calls the API via tools.
 
+From testing, most QeA questions were generic and did not specify a commodity.
+
+To improve answer accuracy, decide on one of the following behaviors:
+- Require the user to specify a commodity.
+- Default to absolute numbers when no commodity is provided, and use the specified commodity when present (already implemented for Question 1).
+- Let the model decide based on short‑term and long‑term memory (used in other endpoints).
+
 Project structure
 - `app/backend`: FastAPI, routers, queries, ingestion, database helpers, utils
 - `app/frontend`: Streamlit UI for real‑time demo
