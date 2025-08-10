@@ -141,20 +141,36 @@ with tab_chat:
     with st.sidebar:
         st.header("💡 Example Questions")
         example_questions = [
-            "What country has the highest current climate risk for Cocoa beans?",
-            "How does Brazil's 2025 climate risk compare to its historical average for Cocoa beans?",
-            "What year was most similar to this season for Oil palm fruit?",
-            "What's the global average climate risk for Cocoa beans in January 2025?",
-            "What are the top 3 countries with the lowest historical risk for Cocoa beans?",
-            "What's the trend in maximum climate risk for Cocoa beans from 2016 to 2025?",
-            "Did Brazil's risk increase or decrease from the previous growing season for Cocoa beans?",
-            "What is the current yield rating for Oil palm fruit and how does it relate to risk?",
-            "Which regions are showing a spike in upcoming seasonal risk for Rice?",
-            "How does the EU's risk for Wheat in 2026 compare with 2025?"
+            "What country has the highest current climate risk?",
+            "How does Brazil's 2025 climate risk compare to its 10-year average?",
+            "What year was most similar to this season in terms of climate risk?",
+            "What's the global average climate risk forecast for September 2025?",
+            "How does the EU's risk today compare with last year?",
+            "What are the top 3 countries with the lowest historical risk?",
+            "What's the trend in maximum climate risk from 2016 to 2025?",
+            "Did India's risk increase or decrease from the previous growing season?",
+            "What is the current yield rating and how does it relate to risk?",
+            "Which regions are showing a spike in upcoming seasonal risk?"
+        ]
+        
+        # Optional additional questions for testing
+        optional_questions = [
+            "What are the top 5 countries with highest climate risk for Rice?",
+            "How does Indonesia's climate risk for Oil palm fruit compare between 2024 and 2025?",
+            "What is the global production volume for Soya beans and its risk category?"
         ]
         
         for i, question in enumerate(example_questions):
             if st.button(f"📝 {question}", key=f"example_{i}"):
+                # Request prefill; will be applied on next rerun before widget instantiation
+                st.session_state.prefill_value = question
+                st.session_state.prefill_requested = True
+                st.rerun()
+        
+        st.divider()
+        st.subheader("🔬 Optional Test Questions")
+        for i, question in enumerate(optional_questions):
+            if st.button(f"🧪 {question}", key=f"optional_{i}"):
                 # Request prefill; will be applied on next rerun before widget instantiation
                 st.session_state.prefill_value = question
                 st.session_state.prefill_requested = True

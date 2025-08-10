@@ -32,6 +32,9 @@ class CrewApiClient:
     def get_top_k_lowest_hist_risk(self, commodity: str, k: int = 3) -> dict[str, Any]:
         return self.post("/api/v1/query/top-k-lowest-hist-risk", {"commodity": commodity, "k": k})
 
+    def get_top_k_highest_current_risk(self, commodity: str, k: int = 5) -> dict[str, Any]:
+        return self.post("/api/v1/query/top-k-highest-current-risk", {"commodity": commodity, "k": k})
+
     def get_trend_max_risk(self, commodity: str, start_year: int, end_year: int) -> dict[str, Any]:
         return self.post("/api/v1/query/trend-max-risk", {"commodity": commodity, "start_year": start_year, "end_year": end_year})
 

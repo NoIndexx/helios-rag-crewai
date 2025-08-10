@@ -110,3 +110,23 @@ The test suite is based on actual API responses verified through direct database
 - **EU Wheat**: Unchanged at 23.5 WAPR between 2025-2026 ✅
 
 If database content changes, update the expected keywords in `test_fix.py` accordingly.
+
+## Optional Test Questions
+
+### Additional Question 1: What are the top 5 countries with highest climate risk for Rice?
+- **Expected Answer**: 1. Pakistan (PK): 48.8 WAPR, 2. United States (US): 45.4 WAPR, 3. Myanmar (MM): 43.2 WAPR
+- **API Endpoint**: Custom endpoint for top-k highest risk
+- **Key Data**: Pakistan leads with 48.8 WAPR (2025-2026), followed by US (45.4) and Myanmar (43.2)
+- **Tool**: `get_top_k_highest_risk` (NEW tool created for highest risk queries)
+
+### Additional Question 2: How does Indonesia's climate risk for Oil palm fruit compare between 2024 and 2025?
+- **Expected Answer**: Only 2025 data available - Indonesia 11.5 WAPR vs 18.0 historical (-36.11%)
+- **API Endpoint**: `/api/v1/query/compare-country-year-vs-hist`
+- **Key Data**: Indonesia (ID) 2025: 11.5 WAPR, historical: 18.0 WAPR, 2024 data not available
+- **Tool**: `compare_country_year_vs_hist`
+
+### Additional Question 3: What is the global production volume for Soya beans and its risk category?
+- **Expected Answer**: Global yield: 2.74 mt/ha with Neutral yield rating, historical avg WAPR: 27.4
+- **API Endpoint**: `/api/v1/query/yield-and-risk-relation`
+- **Key Data**: Soya beans global yield: 2.74 mt/ha, yield rating: Neutral, historical avg WAPR: 27.4, max WAPR: 51.2
+- **Tool**: `get_yield_and_risk_relation`

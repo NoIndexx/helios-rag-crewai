@@ -54,6 +54,29 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
                 print(f"🔧 TOOL ERROR: {error_msg}")
                 return error_msg
 
+    class TopKHighestRiskTool(BaseTool):
+        name: str = "get_top_k_highest_risk"
+        description: str = """Get the top-K countries with HIGHEST CURRENT climate risk for a specific commodity.
+        Use for questions about: top countries with highest risk, multiple countries with worst risk
+        Examples: 'What are the top 5 countries with highest risk for Rice?', 'Top 3 worst risk countries'
+        
+        Parameters:
+        - commodity: str - commodity name like 'Rice', 'Cocoa beans', etc.
+        - k: int - number of countries to return (default 5)"""
+
+        def _run(self, commodity: str, k: int = 5) -> str:
+            """Get top-K countries with highest CURRENT climate risk"""
+            try:
+                print(f"🔧 TOOL CALLED: get_top_k_highest_risk with commodity='{commodity}', k={k}")
+                result = client.get_top_k_highest_current_risk(commodity, k)
+                print(f"🔧 TOOL RESULT: {result}")
+                result_with_meta = {"tool": self.name, "endpoint": "/api/v1/query/top-k-highest-current-risk", **result}
+                return json.dumps(result_with_meta, ensure_ascii=False)
+            except Exception as e:
+                error_msg = f"Error retrieving top highest risk data: {str(e)}"
+                print(f"🔧 TOOL ERROR: {error_msg}")
+                return error_msg
+
     class CompareCountryYearVsHistTool(BaseTool):
         name: str = "compare_country_year_vs_hist"
         description: str = """Compare a country's specific year climate risk vs 10-year historical average.
@@ -193,6 +216,7 @@ def create_agent(api_base: str = "http://localhost:8000") -> Agent:
 
     tools = [
         HighestCurrentRiskTool(),
+        TopKHighestRiskTool(),
         CompareCountryYearVsHistTool(),
         MostSimilarYearTool(),
         GlobalAvgForMonthTool(),

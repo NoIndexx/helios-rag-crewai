@@ -116,6 +116,23 @@ async def get_top_k_lowest_hist_risk(conn, commodity: str, k: int = 3):
     return await fetch_all(conn, sql, (commodity, k))
 
 
+async def get_top_k_highest_current_risk(conn, commodity: str, k: int = 5):
+    """Get top-K countries with highest CURRENT climate risk (this_year_avg_wapr)"""
+    sql = (
+        """
+        SELECT ctry.name AS country_name, ctry.code AS country_code,
+               com.name AS commodity, byc.this_year_avg_wapr, byc.hist_avg_wapr, byc.year
+        FROM climate_risk_by_country byc
+        JOIN countries ctry ON ctry.id = byc.country_id
+        JOIN commodities com ON com.id = byc.commodity_id
+        WHERE byc.this_year_avg_wapr IS NOT NULL AND com.name = ?
+        ORDER BY byc.this_year_avg_wapr DESC, byc.year DESC 
+        LIMIT ?
+        """
+    )
+    return await fetch_all(conn, sql, (commodity, k))
+
+
 async def get_trend_max_risk(conn, commodity: str, start_year: int, end_year: int):
     sql = (
         """

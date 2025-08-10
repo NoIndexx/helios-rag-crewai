@@ -61,6 +61,12 @@ async def top_k_lowest_hist_risk(req: TopKRequest, db=Depends(get_db)):
     return {"answer": result, "params": req.model_dump()}
 
 
+@router.post("/top-k-highest-current-risk", response_model=AnswerResponse)
+async def top_k_highest_current_risk(req: TopKRequest, db=Depends(get_db)):
+    result = await queries.get_top_k_highest_current_risk(db, req.commodity, req.k)
+    return {"answer": result, "params": req.model_dump()}
+
+
 @router.post("/trend-max-risk", response_model=AnswerResponse)
 async def trend_max_risk(req: TrendRequest, db=Depends(get_db)):
     result = await queries.get_trend_max_risk(db, req.commodity, req.start_year, req.end_year)
