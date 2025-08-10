@@ -3,8 +3,6 @@ import os
 import httpx
 import sys
 from pathlib import Path
-import io
-from contextlib import redirect_stdout
 from dotenv import load_dotenv
 import streamlit as st
 
@@ -97,14 +95,11 @@ with tab_chat:
 
             # Display assistant response in chat message container
             with st.chat_message("assistant"):
-                with st.spinner("Analyzing climate data..."):
+                with st.spinner("Analyzing climate data... (logs in terminal)"):
                     try:
                         from app.crew.run_agent import kickoff_example
-
-                        # Capture logs
-                        stdout_buf = io.StringIO()
-                        with redirect_stdout(stdout_buf):
-                            result = kickoff_example(prompt_to_use)
+                        # CrewAI logs will stream to terminal/console
+                        result = kickoff_example(prompt_to_use)
 
                         # Display the answer
                         response = result.answer
@@ -114,12 +109,6 @@ with tab_chat:
                         if hasattr(result, 'source') and result.source:
                             with st.expander("📊 Data Source"):
                                 st.json(result.source)
-
-                        # Show logs if needed (optional)
-                        logs = stdout_buf.getvalue()
-                        if logs:
-                            with st.expander("🔧 Processing Logs"):
-                                st.code(logs)
 
                         # Add assistant response to chat history
                         st.session_state.messages.append({
